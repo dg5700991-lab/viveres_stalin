@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    background-color: #F8F9F6;
+    color: #14201B;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:scale-[0.98];
+  }
+
+  .btn-p {
+    @apply btn bg-brand text-white shadow-sm hover:bg-brand-dark;
+  }
+
+  .btn-s {
+    @apply btn bg-white text-ink border border-ink/15 hover:bg-brand-soft;
+  }
+
+  .inp {
+    @apply w-full rounded-xl border border-ink/20 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 transition;
+  }
+
+  .card {
+    @apply rounded-2xl bg-white border border-ink/10 p-4 shadow-sm;
+  }
+}
+
+/* Scrollbar personalizado limpio y moderno (lado derecho) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0E5A4B;
+}
+
+/* Ocultar barra horizontal cuando no se necesite */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #area-impresion,
+  #area-impresion * {
+    visibility: visible;
+  }
+
+  #area-impresion {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 10px;
+    border: none;
+    box-shadow: none;
+  }
+}
