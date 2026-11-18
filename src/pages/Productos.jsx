@@ -403,13 +403,13 @@ export default function Productos() {
                       </div>
                     </div>
 
-                    {/* Acciones para Admin */}
-                    {isAdmin && (
-                      <div className="mt-4 pt-3 border-t border-ink/10 flex items-center justify-between gap-1.5">
+                    {/* Barra de Acciones para Admin y Cajero */}
+                    <div className="mt-4 pt-3 border-t border-ink/10 flex items-center justify-between gap-1.5">
+                      {isAdmin ? (
                         <button
                           className={`btn py-1 px-2.5 text-xs transition ${p.activo
                               ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                              : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                              : 'bg-brand-soft text-brand-dark border border-brand/30 hover:bg-brand-soft/80'
                             }`}
                           title={p.activo ? 'Desactivar producto' : 'Activar producto'}
                           disabled={estaCambiando}
@@ -417,25 +417,31 @@ export default function Productos() {
                         >
                           {estaCambiando ? '…' : p.activo ? 'Desactivar' : 'Activar'}
                         </button>
+                      ) : (
+                        <span className="text-[10px] uppercase font-bold text-ink/40 tracking-wider">
+                          Inventario
+                        </span>
+                      )}
 
-                        <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          className="btn-p py-1 px-3 text-xs font-bold"
+                          title="Ingresar o reponer stock del producto"
+                          onClick={() => setModalStock(p)}
+                        >
+                          + Reponer Stock
+                        </button>
+                        {isAdmin && (
                           <button
                             className="btn-s py-1 px-2.5 text-xs"
-                            title="Entrada o ajuste de inventario"
-                            onClick={() => setModalStock(p)}
-                          >
-                            Stock
-                          </button>
-                          <button
-                            className="btn-p py-1 px-2.5 text-xs"
                             title="Editar producto e imagen"
                             onClick={() => setModalProd(p)}
                           >
                             Editar
                           </button>
-                        </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}
@@ -453,7 +459,7 @@ export default function Productos() {
                     {isAdmin && <th className="p-3">Costo</th>}
                     <th className="p-3">Stock Actual</th>
                     <th className="p-3">Estado</th>
-                    {isAdmin && <th className="p-3 text-right">Acciones</th>}
+                    <th className="p-3 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink/10">
@@ -559,36 +565,39 @@ export default function Productos() {
                           </span>
                         </td>
 
-                        {isAdmin && (
-                          <td className="p-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isAdmin && (
                               <button
                                 className={`btn py-1 px-2.5 text-xs transition ${p.activo
                                     ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                                    : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                                    : 'bg-brand-soft text-brand-dark border border-brand/30 hover:bg-brand-soft/80'
                                   }`}
                                 disabled={estaCambiando}
                                 onClick={() => alternarEstado(p)}
                               >
                                 {estaCambiando ? '…' : p.activo ? 'Desactivar' : 'Activar'}
                               </button>
+                            )}
 
+                            <button
+                              className="btn-p py-1 px-2.5 text-xs font-bold"
+                              title="Ingresar o reponer stock"
+                              onClick={() => setModalStock(p)}
+                            >
+                              Stock
+                            </button>
+
+                            {isAdmin && (
                               <button
                                 className="btn-s py-1 px-2.5 text-xs"
-                                onClick={() => setModalStock(p)}
-                              >
-                                Stock
-                              </button>
-
-                              <button
-                                className="btn-p py-1 px-2.5 text-xs"
                                 onClick={() => setModalProd(p)}
                               >
                                 Editar
                               </button>
-                            </div>
-                          </td>
-                        )}
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}

@@ -1,9 +1,15 @@
 export default {content:['./index.html','./src/**/*.{js,jsx}'],theme:{extend:{
 fontFamily:{sans:['"Plus Jakarta Sans"','system-ui','sans-serif']},
 colors:{
-  ink:'#1A2B1A',
-  paper:'#F4F7F2',
-  brand:{DEFAULT:'#3D7A2F',dark:'#2A5520',soft:'#E6F0E2',light:'#6AAF57'},
+  ink:'#1A261A',
+  paper:'#F5F8F4',
+  brand:{
+    DEFAULT:'#2E7234',
+    dark:'#1E4E23',
+    soft:'#EAF4E7',
+    light:'#5EA836',
+    vivid:'#4BA32F',
+  },
   sol:'#F0A500',
-  forest:'#1E3A1A',
+  forest:'#163C19',
 }}},plugins:[]}

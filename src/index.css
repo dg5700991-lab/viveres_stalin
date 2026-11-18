@@ -6,8 +6,8 @@
   html, body {
     overflow-x: hidden;
     max-width: 100vw;
-    background-color: #F4F7F2;
-    color: #1A2B1A;
+    background-color: #F5F8F4;
+    color: #1A261A;
   }
 }
 
@@ -17,11 +17,15 @@
   }
 
   .btn-p {
-    @apply btn bg-brand text-white shadow-sm hover:bg-brand-dark;
+    @apply btn text-white shadow-sm hover:shadow-md transition-all duration-150;
+    background: linear-gradient(135deg, #2E7234 0%, #1E4E23 100%);
+  }
+  .btn-p:hover {
+    background: linear-gradient(135deg, #388A3F 0%, #255F2C 100%);
   }
 
   .btn-s {
-    @apply btn bg-white text-ink border border-ink/15 hover:bg-brand-soft;
+    @apply btn bg-white text-ink border border-ink/15 hover:bg-brand-soft hover:border-brand/30;
   }
 
   .inp {
@@ -35,8 +39,8 @@
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #a3bfa0; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #3D7A2F; }
+::-webkit-scrollbar-thumb { background: #b0d4a8; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #2E7234; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

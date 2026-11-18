@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api, list, money } from '../api';
-import { Spinner, Empty, ErrorBox, useLoad, Modal } from '../ui';
+import { Spinner, Empty, ErrorBox, Ok, useLoad, Modal } from '../ui';
 import { formatStock } from './Productos';
 import {
   IconSearch,
@@ -46,6 +46,8 @@ export default function POS() {
   const [cart, setCart] = useState([]);
   const [productoParaCantidad, setProductoParaCantidad] = useState(null);
   const [cantidadInput, setCantidadInput] = useState('1');
+  const [productoParaStock, setProductoParaStock] = useState(null);
+  const [notifStock, setNotifStock] = useState(null);
 
   const [metodoPago, setMetodoPago] = useState('EFECTIVO');
   const [ref, setRef] = useState('');
@@ -369,7 +371,7 @@ export default function POS() {
     <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 w-full h-[calc(100dvh-75px)] overflow-hidden">
 
       {/* ── SELECTOR EN PANTALLAS MÓVILES / TABLETS (< lg) ── */}
-      <div className="lg:hidden flex items-center gap-2 p-1 bg-white rounded-2xl border border-ink/10 shadow-xs flex-shrink-0">
+      <div className="lg:hidden flex items-center gap-2 p-1 bg-white rounded-2xl border border-ink/10 shadow-sm flex-shrink-0">
         <button
           type="button"
           className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
@@ -414,7 +416,7 @@ export default function POS() {
           <input
             ref={inp}
             autoFocus
-            className="inp text-sm pl-10 pr-10 py-2.5 rounded-2xl border-ink/15 shadow-xs w-full bg-white focus:border-brand"
+            className="inp text-sm pl-10 pr-10 py-2.5 rounded-2xl border-ink/15 shadow-sm w-full bg-white focus:border-brand"
             placeholder="Escanear código de barras o escribir nombre del producto..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -438,7 +440,7 @@ export default function POS() {
             <button
               className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex-shrink-0 ${
                 categoriaSeleccionada === ''
-                  ? 'bg-brand text-white shadow-xs'
+                  ? 'bg-brand text-white shadow-sm'
                   : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
               }`}
               onClick={() => setCategoriaSeleccionada('')}
@@ -450,7 +452,7 @@ export default function POS() {
                 key={c.id}
                 className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
                   categoriaSeleccionada === c.id
-                    ? 'bg-brand text-white shadow-xs'
+                    ? 'bg-brand text-white shadow-sm'
                     : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
                 }`}
                 onClick={() => setCategoriaSeleccionada(c.id)}
@@ -460,6 +462,13 @@ export default function POS() {
             ))}
           </div>
         </div>
+
+        {/* Mensaje de reposición de stock exitosa */}
+        {notifStock && (
+          <div className="mb-2.5 flex-shrink-0">
+            <Ok>{notifStock}</Ok>
+          </div>
+        )}
 
         {/* Mensaje de error general si ocurre */}
         {err && (
@@ -518,7 +527,7 @@ export default function POS() {
 
                         {/* Badge de Stock semántico */}
                         <span
-                          className={`absolute bottom-1.5 left-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 shadow-xs ${
+                          className={`absolute bottom-1.5 left-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 shadow-sm ${
                             isAgotado
                               ? 'bg-red-600 text-white'
                               : isBajo
@@ -530,17 +539,30 @@ export default function POS() {
                           {isAgotado ? 'Agotado' : stockTexto}
                         </span>
 
-                        {/* Botón para cantidad personalizada */}
-                        {!isAgotado && (
+                        {/* Botones de acción rápida: Stock y Calculadora */}
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                           <button
                             type="button"
-                            className="absolute top-1.5 right-1.5 rounded-lg bg-white/95 p-1.5 text-ink/70 hover:bg-white hover:text-brand shadow-sm flex items-center justify-center transition"
-                            title="Indicar cantidad personalizada o peso"
-                            onClick={(e) => abrirModalCantidad(p, e)}
+                            className="rounded-lg bg-white/95 px-1.5 py-1 text-[10px] font-black text-brand-dark hover:bg-white hover:text-brand shadow-sm flex items-center gap-0.5 transition border border-brand/20"
+                            title="Aumentar o reponer existencias en tienda"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProductoParaStock(p);
+                            }}
                           >
-                            <IconCalculator className="h-3.5 w-3.5" />
+                            <span>+</span> Stock
                           </button>
-                        )}
+                          {!isAgotado && (
+                            <button
+                              type="button"
+                              className="rounded-lg bg-white/95 p-1 text-ink/70 hover:bg-white hover:text-brand shadow-sm flex items-center justify-center transition"
+                              title="Indicar cantidad personalizada o peso"
+                              onClick={(e) => abrirModalCantidad(p, e)}
+                            >
+                              <IconCalculator className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <p className="font-bold text-ink text-xs sm:text-sm line-clamp-2 leading-tight">
@@ -563,9 +585,16 @@ export default function POS() {
                       </div>
 
                       {isAgotado ? (
-                        <div className="w-full py-1.5 text-center text-[10px] font-bold text-red-600 bg-red-50 rounded-xl">
-                          Sin existencias
-                        </div>
+                        <button
+                          type="button"
+                          className="w-full py-1.5 px-2 text-center text-xs font-bold text-white bg-brand rounded-xl hover:bg-brand-dark transition shadow-sm flex items-center justify-center gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProductoParaStock(p);
+                          }}
+                        >
+                          <span>+</span> Reponer Stock
+                        </button>
                       ) : enCarro ? (
                         <div
                           className="flex items-center justify-between rounded-xl bg-brand-soft/50 border border-brand/30 p-1"
@@ -573,7 +602,7 @@ export default function POS() {
                         >
                           <button
                             type="button"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-brand font-black hover:bg-brand-soft text-sm transition shadow-xs"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-brand font-black hover:bg-brand-soft text-sm transition shadow-sm"
                             onClick={(e) => cambiarCantidad(p.id, -1, e)}
                             aria-label="Restar uno"
                           >
@@ -588,7 +617,7 @@ export default function POS() {
                           </button>
                           <button
                             type="button"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white font-black hover:bg-brand-dark text-sm transition shadow-xs"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white font-black hover:bg-brand-dark text-sm transition shadow-sm"
                             onClick={(e) => cambiarCantidad(p.id, 1, e)}
                             aria-label="Sumar uno"
                           >
@@ -598,7 +627,7 @@ export default function POS() {
                       ) : (
                         <button
                           type="button"
-                          className="w-full rounded-xl bg-brand py-1.5 sm:py-2 text-xs font-bold text-white hover:bg-brand-dark transition text-center flex items-center justify-center gap-1 shadow-xs"
+                          className="w-full rounded-xl bg-brand py-1.5 sm:py-2 text-xs font-bold text-white hover:bg-brand-dark transition text-center flex items-center justify-center gap-1 shadow-sm"
                           onClick={(e) => agregarAlCarrito(p, e)}
                         >
                           <span>+</span> Agregar
@@ -786,7 +815,7 @@ export default function POS() {
                   type="button"
                   className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${
                     tipoComprobante === 'CONSUMIDOR_FINAL'
-                      ? 'bg-brand text-white shadow-xs'
+                      ? 'bg-brand text-white shadow-sm'
                       : 'bg-white text-ink/70 border border-ink/15'
                   }`}
                   onClick={() => setTipoComprobante('CONSUMIDOR_FINAL')}
@@ -798,7 +827,7 @@ export default function POS() {
                   type="button"
                   className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${
                     tipoComprobante === 'FACTURA'
-                      ? 'bg-brand text-white shadow-xs'
+                      ? 'bg-brand text-white shadow-sm'
                       : 'bg-white text-ink/70 border border-ink/15'
                   }`}
                   onClick={() => setTipoComprobante('FACTURA')}
@@ -1012,7 +1041,7 @@ export default function POS() {
                   type="button"
                   className={`py-2 px-1 text-xs font-bold rounded-xl border transition flex flex-col items-center gap-1 text-center ${
                     metodoPago === m
-                      ? 'bg-brand text-white border-brand shadow-xs'
+                      ? 'bg-brand text-white border-brand shadow-sm'
                       : 'bg-white text-ink/70 border-ink/20 hover:bg-brand-soft'
                   }`}
                   onClick={() => setMetodoPago(m)}
@@ -1189,7 +1218,104 @@ export default function POS() {
           onClose={() => setFacturaEmitida(null)}
         />
       )}
+
+      {/* Modal para Reponer Stock rápido desde mostrador/caja */}
+      {productoParaStock && (
+        <ModalReponerStockPOS
+          producto={productoParaStock}
+          onClose={() => setProductoParaStock(null)}
+          onDone={(cant) => {
+            setProductoParaStock(null);
+            setNotifStock(`¡Se agregaron ${cant} ${productoParaStock.unidad_medida} al stock de ${productoParaStock.nombre}!`);
+            prodsLoad.reload();
+            setTimeout(() => setNotifStock(null), 4000);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Modal para Reposición Rápida de Stock desde POS ───────────────────────
+function ModalReponerStockPOS({ producto, onClose, onDone }) {
+  const [cantidad, setCantidad] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const guardar = async (e) => {
+    e.preventDefault();
+    const c = Number(cantidad);
+    if (isNaN(c) || c <= 0) {
+      setErr({ message: 'Indica una cantidad mayor a 0 para el stock.' });
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      await api('/inventario/entradas/', {
+        method: 'POST',
+        body: {
+          producto: producto.id,
+          cantidad: c,
+          motivo: 'Reposición rápida desde mostrador de caja',
+        },
+      });
+      onDone(c);
+    } catch (x) {
+      setErr(x);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={`Reponer Stock: ${producto.nombre}`} onClose={onClose}>
+      <form onSubmit={guardar} className="space-y-4">
+        <div className="rounded-2xl bg-brand-soft/50 p-3.5 flex items-center justify-between text-xs border border-brand/20">
+          <div>
+            <p className="font-bold text-ink">{producto.nombre}</p>
+            <p className="text-ink/60 text-[11px]">Unidad: {producto.unidad_medida} · Código: {producto.codigo_barras || 'Sin código'}</p>
+          </div>
+          <div className="text-right">
+            <span className="text-[11px] text-ink/50 block">Stock registrado:</span>
+            <span className="font-black text-brand text-sm">
+              {formatStock(producto.stock_actual, producto.unidad_medida)}
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-black uppercase tracking-wider text-ink/70 mb-1.5">
+            Cantidad que acaba de ingresar ({producto.unidad_medida}) *
+          </label>
+          <input
+            type="number"
+            step={producto.tipo === 'GRANEL' ? '0.01' : '1'}
+            min={producto.tipo === 'GRANEL' ? '0.01' : '1'}
+            className="inp text-2xl font-black py-2.5 rounded-2xl"
+            placeholder={producto.tipo === 'GRANEL' ? 'Ej: 2.50' : 'Ej: 10'}
+            value={cantidad}
+            onChange={(e) => setCantidad(e.target.value)}
+            required
+            autoFocus
+          />
+          <p className="text-[11px] text-ink/50 mt-1">
+            Esta cantidad se sumará directamente al inventario de la tienda para que puedas venderla de inmediato.
+          </p>
+        </div>
+
+        <ErrorBox error={err} />
+
+        <div className="flex gap-2 pt-2">
+          <button type="button" className="btn-s flex-1" onClick={onClose} disabled={busy}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn-p flex-1 py-3 font-black" disabled={busy}>
+            {busy ? 'Guardando…' : 'Sumar al Inventario'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

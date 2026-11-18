@@ -91,7 +91,7 @@ export default function Fiados() {
   return (
     <div className="space-y-4">
       {/* Resumen general de cuentas por cobrar */}
-      <div className="rounded-2xl bg-white border border-ink/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+      <div className="rounded-2xl bg-white border border-ink/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-ink flex items-center gap-2">
             <IconCredit className="h-6 w-6 text-brand" />
@@ -120,7 +120,7 @@ export default function Fiados() {
               <IconSearch className="h-4 w-4" />
             </span>
             <input
-              className="inp pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-2xl bg-white border-ink/15 focus:border-brand shadow-xs"
+              className="inp pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-2xl bg-white border-ink/15 focus:border-brand shadow-sm"
               placeholder="Buscar cliente por nombre o teléfono…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -138,7 +138,7 @@ export default function Fiados() {
                 : 'No hay clientes con saldos pendientes de pago en este momento.'}
             </Empty>
           ) : (
-            <div className="card divide-y divide-ink/5 p-0 overflow-hidden rounded-2xl bg-white border border-ink/10 shadow-xs max-h-[600px] overflow-y-auto">
+            <div className="card divide-y divide-ink/5 p-0 overflow-hidden rounded-2xl bg-white border border-ink/10 shadow-sm max-h-[600px] overflow-y-auto">
               {deudoresFiltrados.map((c) => (
                 <button
                   key={c.id}
@@ -196,7 +196,7 @@ export default function Fiados() {
               </button>
 
               {/* Encabezado del cliente */}
-              <div className="card flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-white border border-brand/20 shadow-xs">
+              <div className="card flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5 rounded-2xl bg-white border border-brand/20 shadow-sm">
                 <div className="flex items-center gap-3">
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-soft text-brand ring-4 ring-brand-soft/40 flex-shrink-0">
                     <IconUser className="h-6 w-6" />
@@ -220,7 +220,7 @@ export default function Fiados() {
               </div>
 
               {/* Formulario para registrar abono */}
-              <form onSubmit={abonar} className="card space-y-3.5 p-4 sm:p-5 rounded-2xl bg-white border border-ink/10 shadow-xs">
+              <form onSubmit={abonar} className="card space-y-3.5 p-4 sm:p-5 rounded-2xl bg-white border border-ink/10 shadow-sm">
                 <div>
                   <h4 className="font-black text-sm text-ink">
                     Registrar Abono o Pago de Deuda
@@ -266,7 +266,7 @@ export default function Fiados() {
                         onClick={() => setMet(m)}
                         className={`py-2 px-3 text-xs font-bold rounded-xl border transition flex items-center justify-center gap-2 ${
                           met === m
-                            ? 'bg-brand text-white border-brand shadow-xs'
+                            ? 'bg-brand text-white border-brand shadow-sm'
                             : 'bg-white text-ink/70 border-ink/20 hover:bg-brand-soft'
                         }`}
                       >
@@ -314,7 +314,7 @@ export default function Fiados() {
                 ) : !lib || lib.length === 0 ? (
                   <Empty>Este cliente aún no registra movimientos en su libreta.</Empty>
                 ) : (
-                  <div className="card divide-y divide-ink/5 p-0 overflow-hidden rounded-2xl bg-white border border-ink/10 shadow-xs">
+                  <div className="card divide-y divide-ink/5 p-0 overflow-hidden rounded-2xl bg-white border border-ink/10 shadow-sm">
                     {lib.map((x, i) => {
                       const esAbono = Number(x.monto) < 0;
                       return (

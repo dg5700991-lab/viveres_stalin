@@ -94,45 +94,58 @@ function Shell() {
 
   return (
     <div className="h-screen bg-paper flex flex-col overflow-hidden">
-      {/* Header fijo */}
-      <header className="flex-shrink-0 z-20 border-b border-forest/20 bg-white shadow-sm">
+      {/* Header fijo con identidad de marca Víveres Stalin */}
+      <header
+        className="flex-shrink-0 z-20 text-white shadow-md border-b border-black/15"
+        style={{ background: 'linear-gradient(90deg, #163C19 0%, #1E4E23 45%, #2E7234 100%)' }}
+      >
         <div className="mx-auto flex max-w-full items-center gap-2 overflow-x-auto px-4 py-2.5 no-scrollbar">
           <div className="mr-4 flex items-center gap-2.5 flex-shrink-0">
-            <img src="/viveres-stalin.png" alt="Viveres Stalin" className="h-9 w-9 rounded-xl shadow-sm ring-2 ring-brand/20 object-contain bg-white p-1" />
+            <div className="h-10 w-10 rounded-2xl bg-white p-1 shadow-md ring-2 ring-white/30 flex items-center justify-center flex-shrink-0">
+              <img src="/viveres-stalin.png" alt="Víveres Stalin" className="h-full w-full object-contain" />
+            </div>
             <div>
-              <span className="font-black text-brand tracking-tight text-base leading-none block">Víveres Stalin</span>
-              <span className="text-[10px] text-ink/50 font-bold uppercase tracking-wider leading-none block mt-0.5">
+              <span className="font-black text-white tracking-tight text-base leading-none block">Víveres Stalin</span>
+              <span className="text-[10px] text-brand-light font-bold uppercase tracking-wider leading-none block mt-1">
                 {user.rol === 'ADMIN' ? 'Administración' : 'Caja POS'}
               </span>
             </div>
           </div>
 
-          {tabs.map(([to, l]) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                `relative whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex-shrink-0 ${isActive ? 'bg-brand text-white shadow-sm' : 'text-ink/70 hover:bg-brand-soft hover:text-ink'
-                }`
-              }
-            >
-              {l}
-              {to === '/pedidos' && alarm > 0 && (
-                <span className="ml-1.5 rounded-full bg-red-500 text-white px-1.5 py-0.5 text-[10px] font-black">
-                  {alarm}
-                </span>
-              )}
-            </NavLink>
-          ))}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {tabs.map(([to, l]) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) =>
+                  `relative whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition flex-shrink-0 flex items-center gap-1 ${
+                    isActive
+                      ? 'bg-white text-forest shadow-md'
+                      : 'text-white/85 hover:bg-white/15 hover:text-white'
+                  }`
+                }
+              >
+                <span>{l}</span>
+                {to === '/pedidos' && alarm > 0 && (
+                  <span className="ml-1 rounded-full bg-red-500 text-white px-1.5 py-0.5 text-[10px] font-black animate-bounce">
+                    {alarm}
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </div>
 
           <div className="ml-auto flex items-center gap-3 flex-shrink-0">
-            <span className="text-xs font-semibold text-ink/70 hidden sm:flex items-center gap-1.5">
-              <IconUser className="h-3.5 w-3.5" />
+            <span className="text-xs font-semibold text-white/90 hidden sm:flex items-center gap-1.5 bg-white/10 px-2.5 py-1.5 rounded-xl border border-white/15">
+              <IconUser className="h-3.5 w-3.5 text-brand-light" />
               {user.nombre}
             </span>
-            <button className="btn-s text-xs py-1.5 px-3" onClick={logout}>
-              Cerrar sesion
+            <button
+              className="text-xs py-1.5 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold transition border border-white/20 active:scale-95"
+              onClick={logout}
+            >
+              Cerrar sesión
             </button>
           </div>
         </div>
