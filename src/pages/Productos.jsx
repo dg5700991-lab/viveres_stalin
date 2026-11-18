@@ -842,7 +842,7 @@ function ModalProducto({ producto, categorias, onClose, onGuardado }) {
 
       if (tipo === 'CODIGO') {
         const cod = codigoBarras.trim();
-        if (!cod) throw new Error('El producto con código requiere ingresar el código de barras.');
+        if (!cod) throw new Error('Debes ingresar o escanear el código de barras del producto. Si no tiene código, selecciona el tipo "Por peso / Granel".');
         payload.codigo_barras = cod;
       } else {
         payload.codigo_barras = null;
@@ -1340,7 +1340,7 @@ function ModalStock({ producto, onClose, onGuardado }) {
     setError(null);
     try {
       const cant = Number(cantidad);
-      if (cant <= 0) throw new Error('La cantidad a ingresar debe ser mayor a 0.');
+      if (cant <= 0) throw new Error('Indica una cantidad válida mayor a 0 para el ingreso de mercadería.');
 
       await api('/inventario/entradas/', {
         method: 'POST',
@@ -1365,8 +1365,8 @@ function ModalStock({ producto, onClose, onGuardado }) {
     setError(null);
     try {
       const real = Number(stockReal);
-      if (real < 0) throw new Error('El stock real no puede ser negativo.');
-      if (!motivo.trim()) throw new Error('Debes indicar el motivo del ajuste por conteo físico.');
+      if (real < 0) throw new Error('La cantidad de existencias no puede ser menor a cero.');
+      if (!motivo.trim()) throw new Error('Escribe una breve justificación del conteo (por ejemplo: "Conteo mensual de existencias" o "Diferencia por merma").');
 
       await api('/inventario/ajustes/', {
         method: 'POST',

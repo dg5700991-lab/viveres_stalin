@@ -80,9 +80,12 @@ function Shell() {
 
   if (user.rol === 'CLIENTE') {
     return (
-      <div className="p-8">
-        <p className="mb-4">Esta cuenta es de cliente. El panel web es para caja y administracion.</p>
-        <button className="btn-p" onClick={logout}>Cerrar sesion</button>
+    <div className="p-8 flex flex-col items-center justify-center min-h-screen bg-paper">
+        <div className="card max-w-sm w-full text-center space-y-4">
+          <img src="/viveres-stalin.png" alt="Viveres Stalin" className="h-16 w-16 mx-auto object-contain" />
+          <p className="text-sm text-ink/70 font-medium">Esta cuenta es de cliente. El panel de cliente esta disponible solo en la app movil.</p>
+          <button className="btn-p w-full" onClick={logout}>Cerrar sesion</button>
+        </div>
       </div>
     );
   }
@@ -142,10 +145,10 @@ function Shell() {
 
       {/* Contenido principal */}
       <main
-        className={`flex-1 overflow-hidden ${isPOS ? 'p-3' : 'overflow-y-auto p-4'}`}
-        style={isPOS ? { maxWidth: '100%' } : { maxWidth: '100%' }}
+        className={`flex-1 ${isPOS ? 'overflow-hidden p-2 sm:p-3' : 'overflow-y-auto p-3 sm:p-5'}`}
+        style={{ maxWidth: '100%' }}
       >
-        <div className={isPOS ? 'h-full' : 'mx-auto max-w-7xl'}>
+        <div className={isPOS ? 'h-full w-full' : 'mx-auto max-w-7xl'}>
           <Routes>
             <Route path="/" element={<POS />} />
             <Route path="/productos" element={<Productos />} />

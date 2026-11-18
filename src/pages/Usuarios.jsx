@@ -36,7 +36,7 @@ export default function Usuarios() {
 
   const alternarEstado = async (u) => {
     if (u.id === usuarioActual?.id) {
-      alert('No puedes desactivar tu propio usuario en uso.');
+      setNotif({ err: { message: 'Por seguridad, no puedes desactivar tu propio usuario mientras tienes la sesión iniciada.' } });
       return;
     }
     const nuevoEstado = !u.is_active;
@@ -270,7 +270,10 @@ function ModalUsuario({ usuario, onClose, onGuardado }) {
 
       if (!isEditing || password.trim()) {
         if (!isEditing && !password.trim()) {
-          throw new Error('La contraseña es obligatoria para nuevos usuarios.');
+          throw new Error('Debes ingresar una contraseña de acceso para la cuenta del nuevo usuario (mínimo 10 caracteres).');
+        }
+        if (password.trim() && password.trim().length < 10) {
+          throw new Error('La contraseña debe tener al menos 10 caracteres para garantizar la seguridad de la cuenta.');
         }
         if (password.trim()) {
           payload.password = password.trim();

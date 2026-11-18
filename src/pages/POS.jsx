@@ -20,6 +20,7 @@ import {
   IconPrinter,
   IconLock,
   IconUser,
+  IconCheck,
 } from '../icons';
 
 export default function POS() {
@@ -36,6 +37,9 @@ export default function POS() {
   const prodsLoad = useLoad(() => api('/productos/').then(list), []);
   const catsLoad = useLoad(() => api('/categorias/').then(list), []);
   const clientesLoad = useLoad(() => api('/clientes/').then(list), []);
+
+  // Vista para pantallas móviles y tablets: 'catalogo' | 'ticket'
+  const [vistaMovil, setVistaMovil] = useState('catalogo');
 
   const [q, setQ] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
@@ -106,6 +110,10 @@ export default function POS() {
     return cart.reduce((acc, it) => acc + Number(it.cantidad || 0) * Number(it.precio || 0), 0);
   }, [cart]);
 
+  const totalItemsCount = useMemo(() => {
+    return cart.reduce((acc, it) => acc + Number(it.cantidad || 0), 0);
+  }, [cart]);
+
   const numRecibido = Number(recibido || 0);
   const vuelto = numRecibido > total ? numRecibido - total : 0;
   const falta = numRecibido < total ? total - numRecibido : 0;
@@ -113,6 +121,26 @@ export default function POS() {
   const agregarAlCarrito = (p, e) => {
     e?.stopPropagation();
     setErr(null);
+
+    // Validación amigable de stock
+    const stockNum = Number(p.stock_actual || 0);
+    const enCarroActual = cart.find((x) => x.id === p.id);
+    const cantActual = enCarroActual ? Number(enCarroActual.cantidad) : 0;
+
+    if (stockNum <= 0) {
+      setErr({
+        message: `El producto "${p.nombre}" está agotado en el inventario. Ingresa mercadería en la sección de Productos antes de venderlo.`,
+      });
+      return;
+    }
+
+    if (cantActual + 1 > stockNum) {
+      setErr({
+        message: `No puedes agregar más unidades de "${p.nombre}". El inventario actual solo tiene ${formatStock(stockNum, p.unidad_medida)}.`,
+      });
+      return;
+    }
+
     setCart((curr) => {
       const existe = curr.find((x) => x.id === p.id);
       if (existe) {
@@ -137,15 +165,26 @@ export default function POS() {
 
   const cambiarCantidad = (id, delta, e) => {
     e?.stopPropagation();
-    setCart((curr) =>
-      curr
-        .map((x) => {
-          if (x.id !== id) return x;
-          const nueva = +(x.cantidad + delta).toFixed(3);
-          return nueva > 0 ? { ...x, cantidad: nueva } : null;
-        })
-        .filter(Boolean)
-    );
+    setErr(null);
+    setCart((curr) => {
+      const item = curr.find((x) => x.id === id);
+      if (!item) return curr;
+
+      const nueva = +(item.cantidad + delta).toFixed(3);
+      if (nueva <= 0) {
+        return curr.filter((x) => x.id !== id);
+      }
+
+      const stockNum = Number(item.stock_actual || 0);
+      if (delta > 0 && nueva > stockNum) {
+        setErr({
+          message: `El stock disponible de "${item.nombre}" es de solo ${formatStock(stockNum, item.unidad_medida)}.`,
+        });
+        return curr;
+      }
+
+      return curr.map((x) => (x.id === id ? { ...x, cantidad: nueva } : x));
+    });
   };
 
   const quitarItem = (id, e) => {
@@ -155,6 +194,7 @@ export default function POS() {
 
   const abrirModalCantidad = (p, e) => {
     e?.stopPropagation();
+    setErr(null);
     const enCarro = cart.find((x) => x.id === p.id);
     const esPeso = ['KG', 'LB', 'L'].includes((p.unidad_medida || '').toUpperCase());
     setCantidadInput(enCarro ? String(enCarro.cantidad) : esPeso ? '0.5' : '1');
@@ -166,6 +206,15 @@ export default function POS() {
     const cant = Number(cantidadInput);
     if (isNaN(cant) || cant <= 0) return;
     const p = productoParaCantidad;
+
+    const stockNum = Number(p.stock_actual || 0);
+    if (cant > stockNum) {
+      setErr({
+        message: `No es posible agregar ${cant} ${p.unidad_medida} de "${p.nombre}". El stock actual disponible es ${formatStock(stockNum, p.unidad_medida)}.`,
+      });
+      setProductoParaCantidad(null);
+      return;
+    }
 
     setCart((curr) => {
       const existe = curr.find((x) => x.id === p.id);
@@ -191,12 +240,15 @@ export default function POS() {
 
   const scan = async (e) => {
     if (e.key !== 'Enter' || !q.trim()) return;
+    const codigoIngresado = q.trim();
     try {
-      const p = await api(`/productos/por-codigo/${encodeURIComponent(q.trim())}/`);
+      const p = await api(`/productos/por-codigo/${encodeURIComponent(codigoIngresado)}/`);
       agregarAlCarrito(p);
       setQ('');
     } catch (x) {
-      setErr(x.status === 404 ? { message: `Codigo ${q.trim()} no registrado en el sistema.` } : x);
+      setErr({
+        message: `El producto con código "${codigoIngresado}" no está registrado en el catálogo. Verifica que lo hayas escaneado bien o regístralo desde el menú Productos.`,
+      });
     }
   };
 
@@ -207,16 +259,25 @@ export default function POS() {
 
     const pagos = [];
     if (metodoPago === 'EFECTIVO') {
+      if (numRecibido > 0 && numRecibido < total) {
+        setErr({
+          message: `El efectivo recibido ($${numRecibido.toFixed(2)}) es menor que el total de la venta ($${total.toFixed(2)}). Pídele al cliente los $${falta.toFixed(2)} restantes antes de cobrar.`,
+        });
+        setBusy(false);
+        return;
+      }
       pagos.push({ metodo: 'EFECTIVO', monto: total.toFixed(2) });
     } else if (metodoPago === 'TRANSFERENCIA') {
       pagos.push({
         metodo: 'TRANSFERENCIA',
         monto: total.toFixed(2),
-        referencia: ref.trim() || 'Transf. mostrador',
+        referencia: ref.trim() || 'Transferencia mostrador',
       });
     } else if (metodoPago === 'FIADO') {
       if (!clienteSeleccionadoId && !nombreFiado.trim()) {
-        setErr({ message: 'Para registrar a credito / fiado selecciona un cliente o escribe el nombre.' });
+        setErr({
+          message: 'Para registrar una venta a crédito o fiado debes seleccionar un cliente registrado o escribir el nombre de la persona que se lleva el fiado.',
+        });
         setBusy(false);
         return;
       }
@@ -276,6 +337,8 @@ export default function POS() {
       setQCliente('');
       key.current = crypto.randomUUID();
       prodsLoad.reload();
+      // En móvil, regresar a catálogo después de cobrar
+      setVistaMovil('catalogo');
     } catch (e) {
       setErr(e);
     } finally {
@@ -287,37 +350,72 @@ export default function POS() {
   if (turno.error) return <ErrorBox error={turno.error} onRetry={turno.reload} />;
   if (!turno.data) {
     return (
-      <div className="card text-center p-8 space-y-4 max-w-md mx-auto my-12 border-2 border-brand/20 shadow-lg">
-        <span className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-brand-soft text-brand mb-2">
+      <div className="card text-center p-8 space-y-4 max-w-md mx-auto my-12 border-2 border-brand/20 shadow-xl bg-white rounded-3xl">
+        <span className="flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-brand-soft text-brand mb-2 ring-8 ring-brand-soft/50">
           <IconLock className="h-8 w-8" />
         </span>
-        <h2 className="text-xl font-bold text-ink">Turno de Caja Cerrado</h2>
-        <p className="text-sm text-ink/60">
-          Para realizar ventas necesitas tener un turno de caja abierto.
+        <h2 className="text-2xl font-black text-ink">Turno de Caja Cerrado</h2>
+        <p className="text-sm text-ink/70 leading-relaxed">
+          Para comenzar a registrar ventas y cobros en el mostrador, primero necesitas abrir el turno de caja del día con tu fondo inicial.
         </p>
-        <Link className="btn-p block w-full py-3 font-bold" to="/caja">
-          Abrir Turno de Caja
+        <Link className="btn-p block w-full py-3.5 text-base font-black shadow-lg" to="/caja">
+          Abrir Turno de Caja Ahora
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 w-full" style={{ height: 'calc(100vh - 68px)', overflow: 'hidden' }}>
+    <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 w-full h-[calc(100dvh-75px)] overflow-hidden">
 
-      {/* ===== COLUMNA IZQUIERDA: CATALOGO ===== */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      {/* ── SELECTOR EN PANTALLAS MÓVILES / TABLETS (< lg) ── */}
+      <div className="lg:hidden flex items-center gap-2 p-1 bg-white rounded-2xl border border-ink/10 shadow-xs flex-shrink-0">
+        <button
+          type="button"
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
+            vistaMovil === 'catalogo'
+              ? 'bg-brand text-white shadow-sm'
+              : 'text-ink/60 hover:text-ink'
+          }`}
+          onClick={() => setVistaMovil('catalogo')}
+        >
+          <IconTag className="h-3.5 w-3.5" />
+          <span>Catálogo ({productosMostrador.length})</span>
+        </button>
 
-        {/* Busqueda */}
-        <div className="relative w-full mb-3 flex-shrink-0">
-          <span className="absolute left-3.5 top-3 text-ink/40">
+        <button
+          type="button"
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
+            vistaMovil === 'ticket'
+              ? 'bg-brand text-white shadow-sm'
+              : 'text-ink/60 hover:text-ink'
+          }`}
+          onClick={() => setVistaMovil('ticket')}
+        >
+          <IconCart className="h-3.5 w-3.5" />
+          <span>Ticket {cart.length > 0 ? `(${cart.length} • ${money(total)})` : '(Vacío)'}</span>
+        </button>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          COLUMNA IZQUIERDA: CATÁLOGO DE PRODUCTOS
+          Visible siempre en desktop (lg:), en móvil solo si vistaMovil === 'catalogo'
+         ══════════════════════════════════════════════════════════════════════ */}
+      <div
+        className={`flex-1 min-w-0 flex flex-col overflow-hidden ${
+          vistaMovil === 'catalogo' ? 'flex' : 'hidden lg:flex'
+        }`}
+      >
+        {/* Barra de Búsqueda rápida */}
+        <div className="relative w-full mb-2.5 flex-shrink-0">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40">
             <IconSearch className="h-4 w-4" />
           </span>
           <input
             ref={inp}
             autoFocus
-            className="inp text-sm pl-10 pr-9 py-2.5 rounded-2xl border-ink/15 shadow-xs w-full bg-white"
-            placeholder="Escanea el codigo de barras o escribe para buscar producto..."
+            className="inp text-sm pl-10 pr-10 py-2.5 rounded-2xl border-ink/15 shadow-xs w-full bg-white focus:border-brand"
+            placeholder="Escanear código de barras o escribir nombre del producto..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={scan}
@@ -325,22 +423,24 @@ export default function POS() {
           {q && (
             <button
               type="button"
-              className="absolute right-3.5 top-2.5 text-ink/40 hover:text-ink flex items-center justify-center h-5 w-5"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink flex items-center justify-center h-6 w-6 rounded-full hover:bg-gray-100"
               onClick={() => setQ('')}
+              aria-label="Limpiar búsqueda"
             >
               <IconClose className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        {/* Chips de categorias */}
-        <div className="mb-3 flex-shrink-0 overflow-hidden">
+        {/* Píldoras de Categorías */}
+        <div className="mb-2.5 flex-shrink-0 overflow-hidden">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
             <button
-              className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex-shrink-0 ${categoriaSeleccionada === ''
-                  ? 'bg-brand text-white'
+              className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex-shrink-0 ${
+                categoriaSeleccionada === ''
+                  ? 'bg-brand text-white shadow-xs'
                   : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
-                }`}
+              }`}
               onClick={() => setCategoriaSeleccionada('')}
             >
               Todos ({prodsLoad.data?.length || 0})
@@ -348,10 +448,11 @@ export default function POS() {
             {(catsLoad.data || []).map((c) => (
               <button
                 key={c.id}
-                className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${categoriaSeleccionada === c.id
-                    ? 'bg-brand text-white'
+                className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
+                  categoriaSeleccionada === c.id
+                    ? 'bg-brand text-white shadow-xs'
                     : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
-                  }`}
+                }`}
                 onClick={() => setCategoriaSeleccionada(c.id)}
               >
                 {c.nombre}
@@ -360,31 +461,45 @@ export default function POS() {
           </div>
         </div>
 
-        {/* Grid de productos con scroll propio */}
-        <div className="flex-1 overflow-y-auto pr-1 pb-4">
+        {/* Mensaje de error general si ocurre */}
+        {err && (
+          <div className="mb-2.5 flex-shrink-0">
+            <ErrorBox error={err} onRetry={() => setErr(null)} />
+          </div>
+        )}
+
+        {/* Cuadrícula de Productos */}
+        <div className="flex-1 overflow-y-auto pr-1 pb-20 lg:pb-3">
           {prodsLoad.loading ? (
             <Spinner />
           ) : productosMostrador.length === 0 ? (
-            <Empty>No hay productos activos con esos filtros.</Empty>
+            <Empty>
+              No se encontraron productos disponibles con el criterio de búsqueda.
+            </Empty>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3">
               {productosMostrador.map((p) => {
                 const enCarro = cart.find((x) => x.id === p.id);
-                const isBajo = p.stock_bajo;
-                const stockTexto = formatStock(p.stock_actual, p.unidad_medida);
+                const stockNum = Number(p.stock_actual || 0);
+                const isAgotado = stockNum <= 0;
+                const isBajo = !isAgotado && stockNum <= 5;
+                const stockTexto = formatStock(stockNum, p.unidad_medida);
 
                 return (
                   <div
                     key={p.id}
                     onClick={(e) => agregarAlCarrito(p, e)}
-                    className={`group relative flex flex-col justify-between rounded-2xl p-3 text-left transition border cursor-pointer select-none bg-white ${enCarro
-                        ? 'border-brand ring-2 ring-brand/30 shadow-md'
-                        : 'border-ink/10 hover:border-brand/40 hover:shadow-md'
-                      }`}
+                    className={`group relative flex flex-col justify-between rounded-2xl p-2.5 sm:p-3 text-left transition select-none bg-white border ${
+                      isAgotado
+                        ? 'opacity-65 border-gray-200 cursor-not-allowed bg-gray-50/50'
+                        : enCarro
+                        ? 'border-brand ring-2 ring-brand/30 shadow-md cursor-pointer'
+                        : 'border-ink/10 hover:border-brand/40 hover:shadow-md cursor-pointer'
+                    }`}
                   >
                     <div>
-                      {/* Miniatura */}
-                      <div className="relative mb-2 h-28 w-full overflow-hidden rounded-xl bg-brand-soft/30 flex items-center justify-center border border-ink/5">
+                      {/* Imagen o Ícono del producto */}
+                      <div className="relative mb-2 h-24 sm:h-28 w-full overflow-hidden rounded-xl bg-brand-soft/20 flex items-center justify-center border border-ink/5">
                         {p.imagen_url ? (
                           <img
                             src={p.imagen_url}
@@ -401,46 +516,66 @@ export default function POS() {
                           </span>
                         )}
 
-                        {/* Badge de stock */}
+                        {/* Badge de Stock semántico */}
                         <span
-                          className={`absolute bottom-1.5 left-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 ${isBajo ? 'bg-red-600 text-white' : 'bg-ink/80 text-white'
-                            }`}
+                          className={`absolute bottom-1.5 left-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 shadow-xs ${
+                            isAgotado
+                              ? 'bg-red-600 text-white'
+                              : isBajo
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-forest/80 text-white'
+                          }`}
                         >
                           <IconPackage className="h-3 w-3" />
-                          {stockTexto}
+                          {isAgotado ? 'Agotado' : stockTexto}
                         </span>
 
-                        {/* Boton cantidad personalizada */}
-                        <button
-                          type="button"
-                          className="absolute top-1.5 right-1.5 rounded-lg bg-white/90 p-1.5 text-ink/70 hover:bg-white hover:text-brand shadow-sm flex items-center justify-center"
-                          title="Ingresar cantidad"
-                          onClick={(e) => abrirModalCantidad(p, e)}
-                        >
-                          <IconCalculator className="h-3.5 w-3.5" />
-                        </button>
+                        {/* Botón para cantidad personalizada */}
+                        {!isAgotado && (
+                          <button
+                            type="button"
+                            className="absolute top-1.5 right-1.5 rounded-lg bg-white/95 p-1.5 text-ink/70 hover:bg-white hover:text-brand shadow-sm flex items-center justify-center transition"
+                            title="Indicar cantidad personalizada o peso"
+                            onClick={(e) => abrirModalCantidad(p, e)}
+                          >
+                            <IconCalculator className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
 
-                      <p className="font-bold text-ink text-sm line-clamp-2 leading-tight">{p.nombre}</p>
-                      <p className="text-[11px] text-ink/50 mt-0.5 truncate">{p.categoria_nombre || 'General'}</p>
+                      <p className="font-bold text-ink text-xs sm:text-sm line-clamp-2 leading-tight">
+                        {p.nombre}
+                      </p>
+                      <p className="text-[10px] sm:text-[11px] text-ink/50 mt-0.5 truncate">
+                        {p.categoria_nombre || 'General'}
+                      </p>
                     </div>
 
-                    {/* Precio y botones */}
+                    {/* Precio y Controles */}
                     <div className="mt-2 pt-2 border-t border-ink/10">
-                      <div className="flex items-baseline justify-between mb-2">
-                        <span className="text-lg font-black text-brand">{money(p.precio_venta)}</span>
-                        <span className="text-[11px] text-ink/50 uppercase font-mono">/{p.unidad_medida}</span>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <span className="text-base sm:text-lg font-black text-brand">
+                          {money(p.precio_venta)}
+                        </span>
+                        <span className="text-[10px] sm:text-[11px] text-ink/50 uppercase font-mono">
+                          /{p.unidad_medida}
+                        </span>
                       </div>
 
-                      {enCarro ? (
+                      {isAgotado ? (
+                        <div className="w-full py-1.5 text-center text-[10px] font-bold text-red-600 bg-red-50 rounded-xl">
+                          Sin existencias
+                        </div>
+                      ) : enCarro ? (
                         <div
-                          className="flex items-center justify-between rounded-xl bg-brand-soft/40 border border-brand/30 p-1"
+                          className="flex items-center justify-between rounded-xl bg-brand-soft/50 border border-brand/30 p-1"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
                             type="button"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-brand font-black hover:bg-brand-soft text-sm"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-brand font-black hover:bg-brand-soft text-sm transition shadow-xs"
                             onClick={(e) => cambiarCantidad(p.id, -1, e)}
+                            aria-label="Restar uno"
                           >
                             -
                           </button>
@@ -453,8 +588,9 @@ export default function POS() {
                           </button>
                           <button
                             type="button"
-                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white font-black hover:bg-brand-dark text-sm"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white font-black hover:bg-brand-dark text-sm transition shadow-xs"
                             onClick={(e) => cambiarCantidad(p.id, 1, e)}
+                            aria-label="Sumar uno"
                           >
                             +
                           </button>
@@ -462,10 +598,10 @@ export default function POS() {
                       ) : (
                         <button
                           type="button"
-                          className="w-full rounded-xl bg-brand py-2 text-xs font-bold text-white hover:bg-brand-dark transition text-center flex items-center justify-center gap-1"
+                          className="w-full rounded-xl bg-brand py-1.5 sm:py-2 text-xs font-bold text-white hover:bg-brand-dark transition text-center flex items-center justify-center gap-1 shadow-xs"
                           onClick={(e) => agregarAlCarrito(p, e)}
                         >
-                          <span>+</span> Agregar al ticket
+                          <span>+</span> Agregar
                         </button>
                       )}
                     </div>
@@ -475,62 +611,123 @@ export default function POS() {
             </div>
           )}
         </div>
+
+        {/* ── BARRA FLOTANTE INFERIOR EN MÓVIL SI HAY ITEMS ── */}
+        {cart.length > 0 && vistaMovil === 'catalogo' && (
+          <div className="lg:hidden fixed bottom-3 left-3 right-3 z-30">
+            <button
+              type="button"
+              className="w-full py-3.5 px-4 rounded-2xl bg-brand text-white font-black text-sm shadow-2xl flex items-center justify-between gap-2 border border-white/20 active:scale-[0.99] transition"
+              onClick={() => setVistaMovil('ticket')}
+            >
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs">
+                  {cart.length}
+                </span>
+                <span>Ver ticket de venta</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-base font-extrabold">{money(total)}</span>
+                <span className="text-xs bg-white text-brand px-2 py-0.5 rounded-lg font-black">
+                  Cobrar →
+                </span>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ===== COLUMNA DERECHA: TICKET (siempre visible, scroll interno) ===== */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          COLUMNA DERECHA: TICKET DE VENTA Y COBRO
+          Visible siempre en desktop (lg:), en móvil solo si vistaMovil === 'ticket'
+         ══════════════════════════════════════════════════════════════════════ */}
       <aside
-        className="w-full lg:w-[380px] xl:w-[410px] flex-shrink-0 flex flex-col overflow-hidden bg-white border-2 border-brand/20 rounded-2xl shadow-xl"
-        style={{ height: '100%' }}
+        className={`w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col overflow-hidden bg-white border border-brand/20 rounded-2xl sm:rounded-3xl shadow-xl h-full ${
+          vistaMovil === 'ticket' ? 'flex' : 'hidden lg:flex'
+        }`}
       >
-        {/* Scroll interno del ticket */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-
-          {/* Encabezado */}
-          <div className="flex items-center justify-between border-b border-ink/10 pb-2.5 flex-shrink-0">
+        {/* Encabezado del ticket */}
+        <div className="p-3.5 sm:p-4 border-b border-ink/10 flex items-center justify-between flex-shrink-0 bg-white">
+          <div className="flex items-center gap-2">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-soft text-brand">
+              <IconCart className="h-4 w-4" />
+            </span>
             <div>
-              <h2 className="text-base font-black text-ink flex items-center gap-2">
-                <IconCart className="h-4 w-4 text-brand" />
+              <h2 className="text-sm sm:text-base font-black text-ink leading-tight">
                 Ticket de Venta
               </h2>
-              <p className="text-xs text-ink/50">{cart.length} producto{cart.length !== 1 ? 's' : ''}</p>
+              <p className="text-[11px] text-ink/50">
+                {cart.length === 0
+                  ? 'Sin productos seleccionados'
+                  : `${cart.length} producto${cart.length !== 1 ? 's' : ''} (${totalItemsCount} u.)`}
+              </p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
             {cart.length > 0 && (
               <button
                 type="button"
-                className="text-xs text-red-500 hover:text-red-700 font-bold"
+                className="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded-lg hover:bg-red-50 transition"
                 onClick={() => setCart([])}
               >
-                Vaciar
+                Vaciar ticket
               </button>
             )}
-          </div>
 
-          {/* Items del carrito */}
+            {/* Botón para volver al catálogo en móvil */}
+            <button
+              type="button"
+              className="lg:hidden text-xs bg-brand-soft text-brand font-bold px-2.5 py-1 rounded-xl"
+              onClick={() => setVistaMovil('catalogo')}
+            >
+              + Agregar más
+            </button>
+          </div>
+        </div>
+
+        {/* Scroll interno con los items y formularios de cobro */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+
+          {/* Listado de items del ticket */}
           {cart.length === 0 ? (
-            <div className="py-8 text-center border-2 border-dashed border-ink/15 rounded-xl text-ink/50 text-xs space-y-2 bg-brand-soft/10">
+            <div className="py-10 text-center border-2 border-dashed border-ink/15 rounded-2xl text-ink/50 text-xs space-y-2 bg-brand-soft/10">
               <span className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-brand-soft/60 text-ink/40">
                 <IconCart className="h-6 w-6" />
               </span>
-              <p className="font-bold text-ink/60">Ticket vacio</p>
-              <p className="text-[11px]">Toca un producto para agregarlo al ticket</p>
+              <p className="font-bold text-ink/70 text-sm">El ticket está vacío</p>
+              <p className="text-[11px] text-ink/50 max-w-[220px] mx-auto">
+                Selecciona productos del catálogo o escanea con el lector de código de barras.
+              </p>
+              <button
+                type="button"
+                className="lg:hidden mt-2 btn-s text-xs py-1.5 px-3 font-bold"
+                onClick={() => setVistaMovil('catalogo')}
+              >
+                Abrir Catálogo
+              </button>
             </div>
           ) : (
-            <div className="divide-y divide-ink/10 border border-ink/10 rounded-xl bg-gray-50/50">
+            <div className="divide-y divide-ink/5 border border-ink/10 rounded-2xl bg-gray-50/50 overflow-hidden">
               {cart.map((c) => {
                 const subtotalItem = Number(c.cantidad) * Number(c.precio);
                 const esPeso = ['KG', 'LB', 'L'].includes((c.unidad_medida || '').toUpperCase());
                 return (
-                  <div key={c.id} className="p-2 flex items-center gap-2">
+                  <div key={c.id} className="p-2.5 flex items-center gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-xs text-ink truncate">{c.nombre}</p>
-                      <p className="text-[10px] text-ink/60">{money(c.precio)}/{c.unidad_medida}</p>
+                      <p className="text-[10px] text-ink/60">
+                        {money(c.precio)} / {c.unidad_medida}
+                      </p>
                     </div>
 
+                    {/* Controles de cantidad */}
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         type="button"
                         className="flex h-6 w-6 items-center justify-center rounded-md bg-white border border-ink/20 text-ink font-bold hover:bg-brand-soft text-xs"
                         onClick={() => cambiarCantidad(c.id, -1)}
+                        aria-label="Disminuir"
                       >
                         -
                       </button>
@@ -538,7 +735,7 @@ export default function POS() {
                         type="number"
                         step={esPeso ? '0.1' : '1'}
                         min={esPeso ? '0.1' : '1'}
-                        className="w-11 rounded-md border border-ink/20 py-0.5 text-center text-xs font-bold bg-white"
+                        className="w-12 rounded-md border border-ink/20 py-0.5 text-center text-xs font-bold bg-white"
                         value={c.cantidad}
                         onChange={(e) => {
                           const v = parseFloat(e.target.value);
@@ -553,16 +750,20 @@ export default function POS() {
                         type="button"
                         className="flex h-6 w-6 items-center justify-center rounded-md bg-brand text-white font-bold hover:bg-brand-dark text-xs"
                         onClick={() => cambiarCantidad(c.id, 1)}
+                        aria-label="Aumentar"
                       >
                         +
                       </button>
                     </div>
 
-                    <div className="text-right flex-shrink-0 w-14">
-                      <span className="font-extrabold text-xs text-ink block">{money(subtotalItem)}</span>
+                    {/* Subtotal y botón quitar */}
+                    <div className="text-right flex-shrink-0 w-16">
+                      <span className="font-black text-xs text-ink block">
+                        {money(subtotalItem)}
+                      </span>
                       <button
                         type="button"
-                        className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5 justify-end w-full"
+                        className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-0.5 justify-end w-full font-medium"
                         onClick={() => quitarItem(c.id)}
                       >
                         <IconClose className="h-2.5 w-2.5" /> Quitar
@@ -574,32 +775,36 @@ export default function POS() {
             </div>
           )}
 
-          {/* Facturacion */}
-          <div className="rounded-xl border border-ink/15 bg-brand-soft/20 p-2.5 space-y-2">
+          {/* Tipo de Comprobante / Datos de Facturación */}
+          <div className="rounded-2xl border border-ink/10 bg-brand-soft/20 p-3 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-ink/70">Facturacion</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-ink/70">
+                Datos del Comprobante
+              </span>
               <div className="flex gap-1">
                 <button
                   type="button"
-                  className={`px-2 py-0.5 text-[10px] font-bold rounded-lg flex items-center gap-1 ${tipoComprobante === 'CONSUMIDOR_FINAL'
-                      ? 'bg-brand text-white'
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${
+                    tipoComprobante === 'CONSUMIDOR_FINAL'
+                      ? 'bg-brand text-white shadow-xs'
                       : 'bg-white text-ink/70 border border-ink/15'
-                    }`}
+                  }`}
                   onClick={() => setTipoComprobante('CONSUMIDOR_FINAL')}
                 >
                   <IconBolt className="h-3 w-3" />
-                  Rapido
+                  Consumidor Final
                 </button>
                 <button
                   type="button"
-                  className={`px-2 py-0.5 text-[10px] font-bold rounded-lg flex items-center gap-1 ${tipoComprobante === 'FACTURA'
-                      ? 'bg-brand text-white'
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${
+                    tipoComprobante === 'FACTURA'
+                      ? 'bg-brand text-white shadow-xs'
                       : 'bg-white text-ink/70 border border-ink/15'
-                    }`}
+                  }`}
                   onClick={() => setTipoComprobante('FACTURA')}
                 >
                   <IconFileText className="h-3 w-3" />
-                  Con RUC
+                  Con RUC / Cédula
                 </button>
               </div>
             </div>
@@ -607,8 +812,8 @@ export default function POS() {
             {tipoComprobante === 'CONSUMIDOR_FINAL' && (
               <div className="pt-1 border-t border-ink/10">
                 <input
-                  className="inp text-xs py-1 bg-white"
-                  placeholder="Nombre del cliente (opcional)"
+                  className="inp text-xs py-1.5 bg-white placeholder-ink/40"
+                  placeholder="Nombre o apodo del cliente (opcional)"
                   value={nombreFiado}
                   onChange={(e) => setNombreFiado(e.target.value)}
                 />
@@ -616,14 +821,14 @@ export default function POS() {
             )}
 
             {tipoComprobante === 'FACTURA' && (
-              <div className="space-y-1.5 pt-1 border-t border-ink/10">
+              <div className="space-y-2 pt-1 border-t border-ink/10">
                 <div className="relative">
-                  <span className="absolute left-2.5 top-2 text-ink/40">
+                  <span className="absolute left-2.5 top-2.5 text-ink/40">
                     <IconSearch className="h-3.5 w-3.5" />
                   </span>
                   <input
-                    className="inp text-xs py-1 pl-7 bg-white"
-                    placeholder="Buscar cliente por nombre o documento..."
+                    className="inp text-xs py-1.5 pl-8 bg-white placeholder-ink/40"
+                    placeholder="Buscar cliente registrado por nombre o documento..."
                     value={qCliente}
                     onChange={(e) => {
                       setQCliente(e.target.value);
@@ -654,7 +859,9 @@ export default function POS() {
                             <IconUser className="h-3.5 w-3.5 text-ink/40 flex-shrink-0" />
                             <span className="font-semibold truncate">{cl.nombre}</span>
                             {cl.documento && (
-                              <span className="ml-auto text-ink/50 font-mono flex-shrink-0">{cl.documento}</span>
+                              <span className="ml-auto text-ink/50 font-mono flex-shrink-0">
+                                {cl.documento}
+                              </span>
                             )}
                           </button>
                         ))}
@@ -665,29 +872,32 @@ export default function POS() {
                           (cl.documento || '').toLowerCase().includes(lq)
                         );
                       }).length === 0 && (
-                          <p className="px-3 py-2 text-xs text-ink/50 italic">Sin resultados</p>
-                        )}
+                        <p className="px-3 py-2 text-xs text-ink/50 italic">
+                          No hay clientes registrados con ese nombre o número.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
+
                 <div className="grid grid-cols-2 gap-1.5">
                   <input
-                    className="inp text-xs py-1 font-mono bg-white"
-                    placeholder="RUC / Cedula *"
+                    className="inp text-xs py-1.5 font-mono bg-white"
+                    placeholder="RUC / Cédula *"
                     value={clienteRuc}
                     onChange={(e) => setClienteRuc(e.target.value)}
                   />
                   <input
-                    className="inp text-xs py-1 bg-white"
-                    placeholder="Razon Social *"
+                    className="inp text-xs py-1.5 bg-white"
+                    placeholder="Razón Social / Nombre *"
                     value={clienteNombre}
                     onChange={(e) => setClienteNombre(e.target.value)}
                   />
                 </div>
                 <input
                   type="email"
-                  className="inp text-xs py-1 bg-white"
-                  placeholder="Correo (envio de factura electronica)"
+                  className="inp text-xs py-1.5 bg-white"
+                  placeholder="Correo electrónico para enviar la factura"
                   value={clienteEmail}
                   onChange={(e) => setClienteEmail(e.target.value)}
                 />
@@ -695,19 +905,23 @@ export default function POS() {
             )}
           </div>
 
-          {/* Seccion FIADO */}
+          {/* Sección de Selección de Cliente si el método es FIADO */}
           {metodoPago === 'FIADO' && (
-            <div className="rounded-xl border border-brand/30 bg-brand-soft/30 p-2.5 space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-brand flex items-center gap-1.5">
-                <IconCredit className="h-3.5 w-3.5" />
-                Cliente para el Fiado
+            <div className="rounded-2xl border border-amber-300 bg-amber-50/70 p-3 space-y-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                <IconCredit className="h-4 w-4" />
+                Cliente Responsable del Fiado
               </span>
+              <p className="text-[11px] text-amber-800 leading-snug">
+                El monto total quedará anotado en la cuenta por cobrar de esta persona.
+              </p>
+
               <div className="relative">
-                <span className="absolute left-2.5 top-2 text-ink/40">
+                <span className="absolute left-2.5 top-2.5 text-ink/40">
                   <IconSearch className="h-3.5 w-3.5" />
                 </span>
                 <input
-                  className="inp text-xs py-1 pl-7 bg-white"
+                  className="inp text-xs py-1.5 pl-8 bg-white"
                   placeholder="Buscar cliente registrado..."
                   value={qCliente}
                   onChange={(e) => {
@@ -747,28 +961,32 @@ export default function POS() {
                         (cl.documento || '').toLowerCase().includes(lq)
                       );
                     }).length === 0 && (
-                        <p className="px-3 py-2 text-xs text-ink/50 italic">Sin resultados</p>
-                      )}
+                      <p className="px-3 py-2 text-xs text-ink/50 italic">
+                        Cliente no encontrado. Puedes escribir su nombre abajo.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
+
               {!clienteSeleccionadoId && (
                 <input
-                  className="inp text-xs py-1 bg-white"
-                  placeholder="O escribe el nombre del deudor (si no esta registrado)"
+                  className="inp text-xs py-1.5 bg-white"
+                  placeholder="O escribe el nombre completo del cliente a quien se fía *"
                   value={nombreFiado}
                   onChange={(e) => setNombreFiado(e.target.value)}
                 />
               )}
+
               {clienteSeleccionadoId && (
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-brand font-semibold flex items-center gap-1">
-                    <IconUser className="h-3.5 w-3.5" />
+                <div className="flex items-center justify-between text-xs bg-white rounded-xl p-2 border border-amber-200">
+                  <span className="text-amber-950 font-bold flex items-center gap-1.5">
+                    <IconUser className="h-4 w-4 text-amber-700" />
                     {clienteNombre}
                   </span>
                   <button
                     type="button"
-                    className="text-ink/40 hover:text-ink text-[10px]"
+                    className="text-amber-700 hover:text-amber-900 font-bold text-[11px] underline"
                     onClick={() => handleSeleccionarCliente('')}
                   >
                     Cambiar
@@ -778,47 +996,56 @@ export default function POS() {
             </div>
           )}
 
-          {/* Metodos de pago */}
+          {/* Selector de Método de Pago */}
           <div className="space-y-2">
+            <label className="text-[11px] font-black uppercase tracking-wider text-ink/70 block">
+              Forma de Pago del Cliente
+            </label>
             <div className="grid grid-cols-3 gap-1.5">
-              {['EFECTIVO', 'TRANSFERENCIA', 'FIADO'].map((m) => (
+              {[
+                ['EFECTIVO', 'Efectivo', IconCash],
+                ['TRANSFERENCIA', 'Transferencia', IconTransfer],
+                ['FIADO', 'Fiado / Crédito', IconCredit],
+              ].map(([m, label, Icon]) => (
                 <button
                   key={m}
                   type="button"
-                  className={`py-2 text-xs font-bold rounded-xl border transition flex flex-col items-center gap-1 ${metodoPago === m
-                      ? 'bg-brand text-white border-brand'
+                  className={`py-2 px-1 text-xs font-bold rounded-xl border transition flex flex-col items-center gap-1 text-center ${
+                    metodoPago === m
+                      ? 'bg-brand text-white border-brand shadow-xs'
                       : 'bg-white text-ink/70 border-ink/20 hover:bg-brand-soft'
-                    }`}
+                  }`}
                   onClick={() => setMetodoPago(m)}
                 >
-                  {m === 'EFECTIVO' ? (
-                    <><IconCash className="h-4 w-4" /><span>Efectivo</span></>
-                  ) : m === 'TRANSFERENCIA' ? (
-                    <><IconTransfer className="h-4 w-4" /><span>Transf.</span></>
-                  ) : (
-                    <><IconCredit className="h-4 w-4" /><span>Fiado</span></>
-                  )}
+                  <Icon className="h-4 w-4" />
+                  <span className="leading-tight">{label}</span>
                 </button>
               ))}
             </div>
 
+            {/* Campos condicionales según el método */}
             {metodoPago === 'TRANSFERENCIA' && (
-              <input
-                className="inp text-xs py-1.5"
-                placeholder="N. Referencia o comprobante bancario *"
-                value={ref}
-                onChange={(e) => setRef(e.target.value)}
-              />
+              <div className="pt-1">
+                <input
+                  className="inp text-xs py-2 bg-white"
+                  placeholder="Número de comprobante bancario o referencia *"
+                  value={ref}
+                  onChange={(e) => setRef(e.target.value)}
+                />
+                <p className="text-[10px] text-ink/50 mt-1">
+                  Ingresa el código o número de transacción de la app bancaria para verificar el pago.
+                </p>
+              </div>
             )}
 
             {metodoPago === 'EFECTIVO' && (
-              <div className="space-y-2">
+              <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between text-xs font-bold text-ink/70">
-                  <span>Efectivo recibido:</span>
+                  <span>Dinero entregado por el cliente:</span>
                   <div className="flex gap-1 flex-wrap justify-end">
                     <button
                       type="button"
-                      className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-black text-brand hover:bg-brand-soft/80"
+                      className="rounded-lg bg-brand-soft px-2 py-0.5 text-[10px] font-black text-brand hover:bg-brand-soft/80"
                       onClick={() => setRecibido(total > 0 ? total.toFixed(2) : '')}
                     >
                       Exacto
@@ -827,7 +1054,7 @@ export default function POS() {
                       <button
                         key={b}
                         type="button"
-                        className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand hover:bg-brand-soft/80"
+                        className="rounded-lg bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand hover:bg-brand-soft/80"
                         onClick={() => setRecibido(String(b))}
                       >
                         ${b}
@@ -837,55 +1064,84 @@ export default function POS() {
                 </div>
 
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-base font-bold text-ink/40">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-bold text-ink/40">
+                    $
+                  </span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
-                    className="inp pl-7 text-xl font-black"
+                    className="inp pl-8 text-xl font-black py-2.5"
                     placeholder={total > 0 ? total.toFixed(2) : '0.00'}
                     value={recibido}
                     onChange={(e) => setRecibido(e.target.value)}
                   />
                 </div>
 
+                {/* Banner de Vuelto o Dinero Faltante con alta visibilidad */}
                 {numRecibido > 0 && total > 0 && (
                   <div
-                    className={`rounded-xl p-3 text-center ${numRecibido >= total
-                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                        : 'bg-amber-100 text-amber-900 border border-amber-300'
-                      }`}
+                    className={`rounded-2xl p-3 text-center border-2 transition ${
+                      numRecibido >= total
+                        ? 'bg-brand-soft/70 text-brand-dark border-brand/40'
+                        : 'bg-amber-50 text-amber-900 border-amber-300'
+                    }`}
                   >
-                    <span className="text-[11px] uppercase font-black tracking-wider flex items-center justify-center gap-1 mb-1">
+                    <span className="text-[11px] uppercase font-black tracking-wider flex items-center justify-center gap-1.5 mb-1">
                       {numRecibido >= total ? (
-                        <><IconCash className="h-3.5 w-3.5" /><span>Vuelto</span></>
+                        <>
+                          <IconCash className="h-4 w-4 text-brand" />
+                          <span>Cambio / Vuelto a Entregar</span>
+                        </>
                       ) : (
-                        <><IconAlert className="h-3.5 w-3.5" /><span>Falta</span></>
+                        <>
+                          <IconAlert className="h-4 w-4 text-amber-600" />
+                          <span>Dinero Faltante</span>
+                        </>
                       )}
                     </span>
-                    <span className="text-2xl font-black">
+                    <span className="text-2xl font-black block">
                       {numRecibido >= total ? money(vuelto) : money(falta)}
                     </span>
+                    {numRecibido < total && (
+                      <p className="text-[11px] text-amber-800 mt-1 font-medium">
+                        El monto entregado no cubre el valor total. Solicita los {money(falta)} que faltan.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Total */}
-          <div className="pt-2 border-t-2 border-ink/10 flex items-baseline justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-ink/60">TOTAL</span>
-            <span className="text-3xl font-black text-brand">{money(total)}</span>
+          {/* Desglose y Total */}
+          <div className="pt-2 border-t-2 border-ink/10 space-y-1">
+            <div className="flex items-center justify-between text-xs text-ink/60">
+              <span>Subtotal (sin impuestos):</span>
+              <span>{money(total / 1.15)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-ink/60">
+              <span>IVA (15%):</span>
+              <span>{money(total - total / 1.15)}</span>
+            </div>
+            <div className="flex items-baseline justify-between pt-1 border-t border-ink/5">
+              <span className="text-xs font-black uppercase tracking-wider text-ink/70">
+                TOTAL A COBRAR
+              </span>
+              <span className="text-2xl sm:text-3xl font-black text-brand">
+                {money(total)}
+              </span>
+            </div>
           </div>
 
           <ErrorBox error={err} />
         </div>
 
-        {/* Boton COBRAR fijo al fondo */}
-        <div className="p-3 border-t border-ink/10 bg-white flex-shrink-0">
+        {/* Botón de Acción Principal de Cobro (fijo al pie del panel) */}
+        <div className="p-3 sm:p-4 border-t border-ink/10 bg-white flex-shrink-0">
           <button
             type="button"
-            className="btn-p w-full py-4 text-base font-black shadow-lg flex items-center justify-center gap-2 rounded-xl"
+            className="btn-p w-full py-4 text-sm sm:text-base font-black shadow-lg flex items-center justify-center gap-2 rounded-2xl active:scale-[0.99] transition"
             disabled={
               cart.length === 0 ||
               busy ||
@@ -894,19 +1150,28 @@ export default function POS() {
             onClick={cobrar}
           >
             {busy ? (
-              <span>Procesando...</span>
+              <span>Registrando venta...</span>
             ) : cart.length === 0 ? (
-              <span className="text-sm opacity-80">Agrega productos al ticket</span>
+              <span className="opacity-80">Agrega productos al ticket</span>
+            ) : metodoPago === 'EFECTIVO' && numRecibido > 0 && numRecibido < total ? (
+              <span>Falta dinero para cobrar</span>
             ) : (
               <>
                 <IconBolt className="h-5 w-5" />
-                <span>COBRAR {total > 0 ? money(total) : ''}</span>
+                <span>
+                  {metodoPago === 'EFECTIVO'
+                    ? `COBRAR EN EFECTIVO ${money(total)}`
+                    : metodoPago === 'TRANSFERENCIA'
+                    ? `REGISTRAR TRANSFERENCIA ${money(total)}`
+                    : `REGISTRAR FIADO ${money(total)}`}
+                </span>
               </>
             )}
           </button>
         </div>
       </aside>
-      {/* Modales */}
+
+      {/* Modal para indicar cantidad manual o peso */}
       {productoParaCantidad && (
         <ModalCantidadInterna
           productoParaCantidad={productoParaCantidad}
@@ -916,6 +1181,8 @@ export default function POS() {
           onClose={() => setProductoParaCantidad(null)}
         />
       )}
+
+      {/* Modal con Comprobante / Factura emitida */}
       {facturaEmitida && (
         <ModalFactura
           factura={facturaEmitida}
@@ -926,27 +1193,32 @@ export default function POS() {
   );
 }
 
-// =====================================================
-// MODAL: CANTIDAD MANUAL
-// =====================================================
-function ModalCantidadInterna({ productoParaCantidad, cantidadInput, setCantidadInput, guardarCantidadModal, onClose }) {
+// ─── Modal para Cantidad personalizada ──────────────────────────────────────
+function ModalCantidadInterna({
+  productoParaCantidad,
+  cantidadInput,
+  setCantidadInput,
+  guardarCantidadModal,
+  onClose,
+}) {
   const esPeso = ['KG', 'LB', 'L'].includes((productoParaCantidad.unidad_medida || '').toUpperCase());
+
   return (
     <Modal
       title={`Seleccionar cantidad: ${productoParaCantidad.nombre}`}
       onClose={onClose}
     >
       <form onSubmit={guardarCantidadModal} className="space-y-4">
-        <div className="rounded-xl bg-brand-soft/40 p-3 flex items-center justify-between text-xs">
+        <div className="rounded-2xl bg-brand-soft/40 p-3.5 flex items-center justify-between text-xs">
           <div>
             <p className="font-bold text-ink">{productoParaCantidad.nombre}</p>
             <p className="text-ink/60">
-              Precio: {money(productoParaCantidad.precio_venta)}/{productoParaCantidad.unidad_medida}
+              Precio: {money(productoParaCantidad.precio_venta)} / {productoParaCantidad.unidad_medida}
             </p>
           </div>
           <div className="text-right">
-            <span className="text-ink/60 block">Stock disponible:</span>
-            <span className="font-bold text-ink">
+            <span className="text-ink/60 block text-[11px]">Inventario disponible:</span>
+            <span className="font-black text-brand text-sm">
               {formatStock(productoParaCantidad.stock_actual, productoParaCantidad.unidad_medida)}
             </span>
           </div>
@@ -954,17 +1226,17 @@ function ModalCantidadInterna({ productoParaCantidad, cantidadInput, setCantidad
 
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-ink/70 mb-2">
-            Cantidad a vender *
+            Cantidad a vender ({productoParaCantidad.unidad_medida}) *
           </label>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="btn-s h-12 w-12 text-lg font-bold"
+              className="btn-s h-12 w-12 text-xl font-black rounded-xl"
               onClick={() =>
                 setCantidadInput((curr) => {
                   const v = parseFloat(curr) || 1;
                   const step = esPeso ? 0.1 : 1;
-                  return String(Math.max(step, parseFloat((v - step).toFixed(1))));
+                  return String(Math.max(step, parseFloat((v - step).toFixed(2))));
                 })
               }
             >
@@ -972,9 +1244,9 @@ function ModalCantidadInterna({ productoParaCantidad, cantidadInput, setCantidad
             </button>
             <input
               type="number"
-              step={esPeso ? '0.1' : '1'}
-              min={esPeso ? '0.1' : '1'}
-              className="inp text-center text-2xl font-black h-12"
+              step={esPeso ? '0.01' : '1'}
+              min={esPeso ? '0.01' : '1'}
+              className="inp text-center text-2xl font-black h-12 rounded-xl"
               value={cantidadInput}
               onChange={(e) => setCantidadInput(e.target.value)}
               autoFocus
@@ -982,46 +1254,26 @@ function ModalCantidadInterna({ productoParaCantidad, cantidadInput, setCantidad
             />
             <button
               type="button"
-              className="btn-s h-12 w-12 text-lg font-bold"
+              className="btn-s h-12 w-12 text-xl font-black rounded-xl"
               onClick={() =>
                 setCantidadInput((curr) => {
                   const v = parseFloat(curr) || 0;
                   const step = esPeso ? 0.1 : 1;
-                  return String(parseFloat((v + step).toFixed(1)));
+                  return String(parseFloat((v + step).toFixed(2)));
                 })
               }
             >
               +
             </button>
           </div>
-
-          <div className="flex gap-2 mt-3">
-            {(esPeso ? [0.1, 0.25, 0.5, 1, 2, 5] : [1, 2, 3, 5, 10, 12, 24]).map((n) => (
-              <button
-                key={n}
-                type="button"
-                className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-brand-soft text-brand hover:bg-brand-soft/80"
-                onClick={() => setCantidadInput(String(n))}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
         </div>
 
-        <div className="rounded-xl bg-gray-50 p-3 border border-ink/10 flex items-center justify-between">
-          <span className="text-xs font-semibold text-ink/70">Total por este producto:</span>
-          <span className="text-lg font-black text-brand">
-            {money((parseFloat(cantidadInput) || 0) * Number(productoParaCantidad.precio_venta))}
-          </span>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2 border-t border-ink/10">
-          <button type="button" className="btn-s" onClick={onClose}>
+        <div className="flex gap-2 pt-2">
+          <button type="button" className="btn-s flex-1" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className="btn-p min-w-[140px]">
-            Agregar al Ticket
+          <button type="submit" className="btn-p flex-1 py-3 font-black">
+            Confirmar e Incluir al Ticket
           </button>
         </div>
       </form>
@@ -1029,15 +1281,18 @@ function ModalCantidadInterna({ productoParaCantidad, cantidadInput, setCantidad
   );
 }
 
-// =====================================================
-// MODAL: FACTURA / TICKET IMPRIMIBLE
-// =====================================================
+// ─── Modal para Comprobante y Ticket ────────────────────────────────────────
 function ModalFactura({ factura, onClose }) {
+  const numFactura = factura.venta?.numero || '001-001-' + String(factura.venta?.id || '1').padStart(9, '0');
+
   const imprimir = () => {
-    const win = window.open('', '_blank', 'width=350,height=600');
-    if (!win) return;
+    const win = window.open('', '_blank', 'width=400,height=600');
+    if (!win) {
+      window.print();
+      return;
+    }
     const f = factura;
-    const lineas = f.itemsComprados
+    const itemsHtml = f.itemsComprados
       .map(
         (it) =>
           `<tr><td style="padding:2px 4px">${it.cantidad} ${it.unidad_medida}</td><td style="padding:2px 4px">${it.nombre}</td><td style="padding:2px 4px;text-align:right">${money(it.cantidad * it.precio)}</td></tr>`
@@ -1059,53 +1314,60 @@ function ModalFactura({ factura, onClose }) {
   .footer { text-align: center; margin-top: 8px; font-size: 10px; }
 </style>
 </head><body>
-<h1>VÍVERES STALIN</h1>
-<div class="center" style="font-size:10px">R.U.C.: 1799999999001</div>
-<div class="center" style="font-size:10px">Ticket #${f.venta?.id || ''}</div>
-<div class="center" style="font-size:10px">${new Date(f.fecha).toLocaleString('es-EC')}</div>
-<div class="sep"></div>
-<div>Cliente: ${clienteNombreTicket}</div>
-<div class="sep"></div>
-<table>
-  <thead><tr><th>Cant</th><th>Descripcion</th><th>Total</th></tr></thead>
-  <tbody>${lineas}</tbody>
-</table>
-<div class="sep"></div>
-<div class="total">TOTAL: ${money(f.total)}</div>
-${f.vuelto > 0 ? `<div style="text-align:right">Vuelto: ${money(f.vuelto)}</div>` : ''}
-<div class="footer">Gracias por su compra!</div>
+  <h1>VÍVERES STALIN</h1>
+  <p class="center">R.U.C.: 1799999999001</p>
+  <p class="center">COMPROBANTE ELECTRÓNICO</p>
+  <p class="center"><b>FAC N°: ${numFactura}</b></p>
+  <p class="center">${new Date(f.fecha).toLocaleString()}</p>
+  <div class="sep"></div>
+  <p><b>Cliente:</b> ${clienteNombreTicket}</p>
+  <p><b>RUC/C.I.:</b> ${f.cliente.ruc}</p>
+  <p><b>Método:</b> ${f.metodoPago}</p>
+  <div class="sep"></div>
+  <table>
+    <thead><tr><th>Cant</th><th>Desc</th><th style="text-align:right">Total</th></tr></thead>
+    <tbody>${itemsHtml}</tbody>
+  </table>
+  <div class="sep"></div>
+  <p style="text-align:right">Subtotal: ${money(f.subtotal)}</p>
+  <p style="text-align:right">IVA 15%: ${money(f.iva)}</p>
+  <p class="total">TOTAL: ${money(f.total)}</p>
+  ${
+    f.vuelto > 0
+      ? `<p style="text-align:right">Recibido: ${money(f.efectivoRecibido)}</p><p style="text-align:right;font-weight:bold">Vuelto: ${money(f.vuelto)}</p>`
+      : ''
+  }
+  <div class="sep"></div>
+  <p class="footer">¡Gracias por preferir Víveres Stalin!<br>Vuelva pronto.</p>
+  <script>window.onload = function() { window.print(); window.close(); };<\/script>
 </body></html>`);
     win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 400);
   };
 
-  const v = factura.venta;
-  const numFactura = `001-001-${String(v.id).padStart(9, '0')}`;
-
   return (
-    <Modal title="Comprobante Emitido" onClose={onClose}>
+    <Modal title="Venta Realizada con Éxito" onClose={onClose}>
       <div className="space-y-4">
-        <div id="area-impresion" className="border border-ink/20 rounded-xl p-4 bg-white text-ink text-xs font-mono space-y-3 shadow-inner max-h-96 overflow-y-auto">
+        {/* Vista previa del comprobante */}
+        <div id="area-impresion" className="border border-ink/20 rounded-2xl p-4 bg-white text-ink text-xs font-mono space-y-3 shadow-inner max-h-96 overflow-y-auto">
           <div className="text-center border-b border-dashed border-ink/20 pb-3">
             <h2 className="text-base font-black uppercase tracking-wider text-brand">VÍVERES STALIN</h2>
             <p className="text-[10px] text-ink/70">R.U.C.: 1799999999001</p>
-            <p className="text-[10px] font-bold text-ink mt-1">COMPROBANTE ELECTRONICO</p>
-            <p className="text-xs font-extrabold text-ink">FACTURA N.: {numFactura}</p>
+            <p className="text-[10px] font-bold text-ink mt-1">COMPROBANTE ELECTRÓNICO</p>
+            <p className="text-xs font-extrabold text-ink">FACTURA N°: {numFactura}</p>
             <p className="text-[10px] text-ink/50">Fecha: {new Date(factura.fecha).toLocaleString()}</p>
           </div>
 
           <div className="border-b border-dashed border-ink/20 pb-2 space-y-0.5 text-[11px]">
             <p><b>Cliente:</b> {factura.cliente.nombre}</p>
             <p><b>RUC / C.I.:</b> {factura.cliente.ruc}</p>
-            <p><b>Correo:</b> {factura.cliente.email}</p>
+            <p><b>Forma de Pago:</b> {factura.metodoPago}</p>
           </div>
 
           <table className="w-full text-left text-[11px] border-b border-dashed border-ink/20 pb-2">
             <thead>
               <tr className="border-b border-ink/10 text-ink/70">
                 <th className="py-1">Cant.</th>
-                <th className="py-1">Descripcion</th>
+                <th className="py-1">Descripción</th>
                 <th className="py-1 text-right">P.Unit</th>
                 <th className="py-1 text-right">Total</th>
               </tr>
@@ -1127,30 +1389,28 @@ ${f.vuelto > 0 ? `<div style="text-align:right">Vuelto: ${money(f.vuelto)}</div>
             <p>IVA 15%: {money(factura.iva)}</p>
             <p className="text-sm font-black text-ink pt-1 border-t border-ink/10">TOTAL: {money(factura.total)}</p>
             {factura.vuelto > 0 && (
-              <p className="text-[11px] font-bold text-brand">VUELTO: {money(factura.vuelto)}</p>
+              <p className="text-[11px] font-bold text-brand">VUELTO ENTREGADO: {money(factura.vuelto)}</p>
             )}
           </div>
 
           <div className="text-center pt-3 border-t border-dashed border-ink/20 text-[10px] text-ink/60">
-            <p>Gracias por su compra!</p>
+            <p>¡Gracias por su compra en Víveres Stalin!</p>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <button type="button" className="btn-s" onClick={onClose}>
-            Cerrar / Nueva Venta
-          </button>
+        <div className="flex gap-2">
           <button
             type="button"
-            className="btn-p gap-2 px-6 font-bold flex items-center"
+            className="btn-p flex-1 py-3 font-bold flex items-center justify-center gap-2"
             onClick={imprimir}
           >
-            <IconPrinter className="h-4 w-4" />
-            <span>Imprimir Ticket</span>
+            <IconPrinter className="h-4 w-4" /> Imprimir Ticket
+          </button>
+          <button type="button" className="btn-s flex-1 py-3 font-bold" onClick={onClose}>
+            Nueva Venta
           </button>
         </div>
       </div>
     </Modal>
   );
 }
-

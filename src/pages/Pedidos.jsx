@@ -206,16 +206,18 @@ function ModalCobro({ pedido, onClose, onDone }) {
             </div>
 
             {efectivoNum >= total && (
-              <div className={`rounded-xl p-3 text-center ${vuelto > 0 ? 'bg-emerald-50 border-2 border-emerald-300' : 'bg-gray-50 border border-gray-200'}`}>
-                <p className="text-xs font-bold text-ink/50 uppercase tracking-wider mb-0.5">Vuelto a dar</p>
-                <p className={`text-3xl font-black ${vuelto > 0 ? 'text-emerald-700' : 'text-ink/40'}`}>
+              <div className={`rounded-xl p-3 text-center ${vuelto > 0 ? 'bg-brand-soft border-2 border-brand/40' : 'bg-gray-50 border border-gray-200'}`}>
+                <p className="text-xs font-bold text-ink/60 uppercase tracking-wider mb-0.5">Vuelto a entregar al cliente</p>
+                <p className={`text-3xl font-black ${vuelto > 0 ? 'text-brand' : 'text-ink/40'}`}>
                   {money(vuelto)}
                 </p>
               </div>
             )}
             {efectivoNum > 0 && efectivoNum < total && (
-              <div className="rounded-xl bg-red-50 border border-red-200 p-2.5 text-center">
-                <p className="text-xs font-bold text-red-700">Faltan {money(total - efectivoNum)}</p>
+              <div className="rounded-xl bg-amber-50 border border-amber-300 p-2.5 text-center">
+                <p className="text-xs font-bold text-amber-900">
+                  Faltan {money(total - efectivoNum)} para completar el total de {money(total)}.
+                </p>
               </div>
             )}
           </div>
@@ -224,7 +226,7 @@ function ModalCobro({ pedido, onClose, onDone }) {
         {metodo === 'TRANSFERENCIA' && (
           <div className="space-y-2">
             <label className="text-xs font-bold text-ink/60 uppercase tracking-wider block">
-              N.° de comprobante o referencia bancaria
+              N.° de comprobante o referencia bancaria *
             </label>
             <input
               className="inp text-base font-semibold"
@@ -234,20 +236,20 @@ function ModalCobro({ pedido, onClose, onDone }) {
               autoFocus
             />
             <p className="text-[11px] text-ink/50">
-              Verifica en tu app bancaria que el dinero haya ingresado antes de entregar.
+              Verifica en tu app bancaria que el dinero haya ingresado a la cuenta antes de entregar los productos.
             </p>
           </div>
         )}
 
         {metodo === 'FIADO' && (
-          <div className="rounded-xl bg-purple-50 border border-purple-200 p-3.5 space-y-2">
+          <div className="rounded-xl bg-amber-50 border border-amber-300 p-3.5 space-y-2">
             <div className="flex items-center gap-2">
-              <IconCredit className="h-4 w-4 text-purple-700" />
-              <p className="text-xs font-bold text-purple-900">
+              <IconCredit className="h-4 w-4 text-amber-800" />
+              <p className="text-xs font-bold text-amber-950">
                 Venta a crédito (Fiado)
               </p>
             </div>
-            <p className="text-xs text-purple-800 leading-relaxed">
+            <p className="text-xs text-amber-900 leading-relaxed">
               El cliente <strong>{pedido.cliente_nombre || 'Cliente'}</strong> retirará los productos ahora y pagará después. Este valor de <strong>{money(total)}</strong> se cargará automáticamente a su cuenta de fiados.
             </p>
           </div>

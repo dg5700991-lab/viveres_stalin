@@ -733,13 +733,13 @@ export default function ClientePanel() {
                   </div>
 
                   {metodoPago === 'TRANSFERENCIA' && (
-                    <div className="rounded-xl bg-blue-50/70 border border-blue-200 p-2.5 space-y-1.5">
-                      <label className="text-[11px] font-bold text-blue-900 block">
-                        N. comprobante o referencia (opcional)
+                    <div className="rounded-xl bg-brand-soft/60 border border-brand/20 p-2.5 space-y-1.5">
+                      <label className="text-[11px] font-bold text-brand-dark block">
+                        N.° comprobante o referencia bancaria (opcional)
                       </label>
                       <input
                         className="inp text-xs bg-white"
-                        placeholder="Ej: 987654 (o muestra el comprobante al retirar)"
+                        placeholder="Ej: 987654 (o muestra el comprobante al retirar en el local)"
                         value={referenciaTransferencia}
                         onChange={e => setReferenciaTransferencia(e.target.value)}
                         maxLength={50}
