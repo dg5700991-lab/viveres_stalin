@@ -162,8 +162,8 @@ function ModalCobro({ pedido, onClose, onDone }) {
               type="button"
               className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition ${
                 metodo === 'TRANSFERENCIA'
-                  ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-400 font-black text-blue-800'
-                  : 'border-ink/15 bg-white text-ink/70 hover:border-blue-300'
+                  ? 'border-brand bg-brand-soft ring-2 ring-brand/40 font-black text-brand-dark'
+                  : 'border-ink/15 bg-white text-ink/70 hover:border-brand/40'
               }`}
               onClick={() => setMetodo('TRANSFERENCIA')}
             >
@@ -175,8 +175,8 @@ function ModalCobro({ pedido, onClose, onDone }) {
               type="button"
               className={`p-2.5 rounded-xl border text-center flex flex-col items-center gap-1 transition ${
                 metodo === 'FIADO'
-                  ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-400 font-black text-purple-800'
-                  : 'border-ink/15 bg-white text-ink/70 hover:border-purple-300'
+                  ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-400 font-black text-amber-900'
+                  : 'border-ink/15 bg-white text-ink/70 hover:border-amber-300'
               }`}
               onClick={() => setMetodo('FIADO')}
             >

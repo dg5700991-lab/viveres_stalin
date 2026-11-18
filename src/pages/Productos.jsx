@@ -356,7 +356,7 @@ export default function Productos() {
                         <div className="absolute top-2 right-2">
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm ${p.activo
-                                ? 'bg-emerald-600 text-white'
+                                ? 'bg-brand text-white'
                                 : 'bg-gray-400 text-white'
                               }`}
                           >
@@ -919,7 +919,7 @@ function ModalProducto({ producto, categorias, onClose, onGuardado }) {
           <button
             type="button"
             className={`btn py-1.5 px-4 text-xs font-bold transition shadow-sm flex items-center gap-1.5 ${activo
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                ? 'bg-brand text-white hover:bg-brand-dark'
                 : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
               }`}
             onClick={() => setActivo(!activo)}
@@ -1245,7 +1245,7 @@ function ModalCategoria({ categoria, onClose, onGuardado }) {
           <button
             type="button"
             className={`btn py-1 px-3 text-xs font-bold transition shadow-sm flex items-center gap-1.5 ${activo
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                ? 'bg-brand text-white hover:bg-brand-dark'
                 : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
               }`}
             onClick={() => setActivo(!activo)}

@@ -301,7 +301,7 @@ export default function Caja() {
             <div className="pt-2">
               <button
                 type="button"
-                className="btn-p w-full py-4 text-base font-black shadow-lg bg-emerald-700 hover:bg-emerald-800 flex items-center justify-center gap-2"
+                className="btn-p w-full py-4 text-base font-black shadow-lg flex items-center justify-center gap-2"
                 onClick={handleCierreAutomatico}
                 disabled={busy}
               >
