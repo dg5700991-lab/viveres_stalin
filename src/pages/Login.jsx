@@ -6,20 +6,17 @@ import { IconUser, IconMail, IconLock, IconEye, IconEyeOff } from '../icons';
 
 export default function Login() {
   const { login } = useAuth();
-  const [modo, setModo] = useState('login'); // 'login' | 'registro'
+  const [modo, setModo] = useState('login');
 
-  // Visibilidad de contraseñas
   const [showPassword, setShowPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirm, setShowRegConfirm] = useState(false);
 
-  // Login state
   const [u, setU] = useState('');
   const [p, setP] = useState('');
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  // Register state
   const [reg, setReg] = useState({
     nombres: '', apellidos: '', email: '', telefono: '',
     username: '', password: '', confirmar_password: '',
@@ -37,20 +34,14 @@ export default function Login() {
       await login(u.trim(), p);
     } catch (x) {
       setErr(x.status === 401 || x.status === 400
-        ? { message: 'Usuario o contraseña incorrectos.' } : x);
+        ? { message: 'Usuario o contrasena incorrectos.' } : x);
       setBusy(false);
     }
   };
 
   const setField = (k) => (e) => {
     setReg((r) => ({ ...r, [k]: e.target.value }));
-    if (fieldErrs[k]) {
-      setFieldErrs((prev) => {
-        const next = { ...prev };
-        delete next[k];
-        return next;
-      });
-    }
+    if (fieldErrs[k]) setFieldErrs((prev) => { const n = { ...prev }; delete n[k]; return n; });
   };
 
   const validateReg = () => {
@@ -58,13 +49,13 @@ export default function Login() {
     if (!reg.nombres.trim()) errs.nombres = 'Requerido';
     if (!reg.apellidos.trim()) errs.apellidos = 'Requerido';
     if (!reg.email.trim()) errs.email = 'Requerido';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reg.email)) errs.email = 'Correo inválido';
-    if (reg.telefono && !/^\d+$/.test(reg.telefono)) errs.telefono = 'Solo números';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reg.email)) errs.email = 'Correo invalido';
+    if (reg.telefono && !/^\d+$/.test(reg.telefono)) errs.telefono = 'Solo numeros';
     if (!reg.username.trim()) errs.username = 'Requerido';
     if (!reg.password) errs.password = 'Requerido';
-    else if (reg.password.length < 10) errs.password = 'Mínimo 10 caracteres';
+    else if (reg.password.length < 10) errs.password = 'Minimo 10 caracteres';
     if (!reg.confirmar_password) errs.confirmar_password = 'Requerido';
-    else if (reg.password !== reg.confirmar_password) errs.confirmar_password = 'Las contraseñas no coinciden';
+    else if (reg.password !== reg.confirmar_password) errs.confirmar_password = 'Las contrasenas no coinciden';
     return errs;
   };
 
@@ -102,58 +93,108 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand/10 via-paper to-brand-soft/30 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl border border-ink/10 shadow-xl overflow-hidden">
+    <div className="min-h-screen flex">
 
-        {/* Cabecera / Banner con Logo */}
-        <div className="bg-gradient-to-r from-brand to-brand-dark px-6 py-7 text-center text-white relative">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-1 ring-2 ring-white/30 shadow-lg mb-3">
-            <img src="/logo.svg" alt="Víveres Stalin" className="h-full w-full object-contain rounded-xl" />
+      {/* Panel izquierdo — Marca (solo desktop) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col items-center justify-center"
+        style={{ background: 'linear-gradient(145deg, #1E3A1A 0%, #2A5520 50%, #3D7A2F 100%)' }}>
+        {/* patron de fondo */}
+        <div className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `radial-gradient(circle at 20% 30%, #6AAF57 0%, transparent 50%),
+                              radial-gradient(circle at 80% 70%, #6AAF57 0%, transparent 50%)`,
+          }} />
+        {/* Hexagonos decorativos */}
+        <div className="absolute top-10 right-10 w-24 h-24 rounded-3xl border border-white/10 rotate-12" />
+        <div className="absolute bottom-20 left-10 w-16 h-16 rounded-2xl border border-white/10 -rotate-12" />
+        <div className="absolute top-1/3 right-6 w-8 h-8 rounded-xl bg-white/5" />
+
+        <div className="relative z-10 text-center px-10">
+          <div className="mb-8 inline-block">
+            <div className="w-40 h-40 mx-auto rounded-3xl bg-white/10 backdrop-blur p-4 ring-1 ring-white/20 shadow-2xl flex items-center justify-center">
+              <img src="/viveres-stalin.png" alt="Viveres Stalin" className="w-full h-full object-contain drop-shadow-xl" />
+            </div>
           </div>
-          <h1 className="text-2xl font-black tracking-tight">Víveres Stalin</h1>
-          <p className="text-xs text-white/80 mt-1 font-medium">
-            {modo === 'login' ? 'Sistema POS & Punto de Venta' : 'Registro de clientes y personal'}
+          <h1 className="text-4xl font-black text-white tracking-tight leading-tight mb-3">
+            Viveres Stalin
+          </h1>
+          <p className="text-white/60 text-sm font-medium max-w-xs mx-auto leading-relaxed">
+            Sistema integral de punto de venta y gestion de pedidos en linea
           </p>
-        </div>
 
-        {/* Selector de modo */}
-        <div className="grid grid-cols-2 p-2 bg-gray-50/80 border-b border-ink/5">
-          <button
-            type="button"
-            className={`py-2 text-xs font-bold rounded-xl transition ${modo === 'login'
-                ? 'bg-white text-brand shadow-sm'
-                : 'text-ink/50 hover:text-ink'
-              }`}
-            onClick={() => { setModo('login'); setErr(null); }}
-          >
-            Iniciar sesión
-          </button>
-          <button
-            type="button"
-            className={`py-2 text-xs font-bold rounded-xl transition ${modo === 'registro'
-                ? 'bg-white text-brand shadow-sm'
-                : 'text-ink/50 hover:text-ink'
-              }`}
-            onClick={() => { setModo('registro'); setRegErr(null); setFieldErrs({}); }}
-          >
-            Crear cuenta
-          </button>
+          <div className="mt-10 grid grid-cols-3 gap-4 text-center">
+            {[
+              ['Ventas', 'Cobros rapidos'],
+              ['Pedidos', 'En tiempo real'],
+              ['Inventario', 'Siempre al dia'],
+            ].map(([title, sub]) => (
+              <div key={title} className="rounded-2xl bg-white/10 backdrop-blur px-3 py-4 ring-1 ring-white/10">
+                <p className="text-white font-black text-sm">{title}</p>
+                <p className="text-white/50 text-[11px] mt-0.5">{sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
 
-        {/* Contenido Formulario */}
-        <div className="p-6">
-          {modo === 'login' ? (
-            <form onSubmit={go} className="space-y-4">
+      {/* Panel derecho — Formulario */}
+      <div className="flex-1 flex items-center justify-center p-6 bg-paper">
+        <div className="w-full max-w-sm">
+
+          {/* Logo mobile */}
+          <div className="lg:hidden flex items-center gap-3 mb-8">
+            <img src="/viveres-stalin.png" alt="Viveres Stalin" className="h-12 w-12 object-contain rounded-2xl bg-white shadow-md p-1" />
+            <div>
+              <p className="font-black text-brand-dark text-lg leading-none">Viveres Stalin</p>
+              <p className="text-xs text-ink/50 font-medium">Sistema POS</p>
+            </div>
+          </div>
+
+          {/* Titulo */}
+          <div className="mb-7">
+            <h2 className="text-2xl font-black text-ink leading-tight">
+              {modo === 'login' ? 'Bienvenido de vuelta' : 'Crear cuenta'}
+            </h2>
+            <p className="text-sm text-ink/50 mt-1">
+              {modo === 'login'
+                ? 'Ingresa tus credenciales para continuar'
+                : 'Completa los datos para registrarte'}
+            </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 mb-6 p-1 bg-brand-soft rounded-2xl">
+            <button
+              type="button"
+              onClick={() => { setModo('login'); setErr(null); }}
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${modo === 'login'
+                ? 'bg-white text-brand shadow-sm'
+                : 'text-ink/50 hover:text-ink'}`}
+            >
+              Iniciar sesion
+            </button>
+            <button
+              type="button"
+              onClick={() => { setModo('registro'); setRegErr(null); setFieldErrs({}); }}
+              className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all ${modo === 'registro'
+                ? 'bg-white text-brand shadow-sm'
+                : 'text-ink/50 hover:text-ink'}`}
+            >
+              Crear cuenta
+            </button>
+          </div>
+
+          {/* FORMULARIO LOGIN */}
+          {modo === 'login' && (
+            <form onSubmit={go} className="space-y-5">
               <div>
-                <label className="text-xs font-bold text-ink/70 block mb-1 uppercase tracking-wider">
-                  Usuario
-                </label>
+                <label className="text-xs font-bold text-ink/60 block mb-1.5 uppercase tracking-wider">Usuario</label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-3 text-ink/40">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/35">
                     <IconUser className="h-4 w-4" />
                   </span>
                   <input
-                    className="inp pl-10 py-2.5 text-sm"
+                    className="inp pl-10 py-3 text-sm font-medium"
                     placeholder="Tu nombre de usuario"
                     value={u}
                     onChange={(e) => setU(e.target.value)}
@@ -164,17 +205,15 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-ink/70 block mb-1 uppercase tracking-wider">
-                  Contraseña
-                </label>
+                <label className="text-xs font-bold text-ink/60 block mb-1.5 uppercase tracking-wider">Contrasena</label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-3 text-ink/40">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/35">
                     <IconLock className="h-4 w-4" />
                   </span>
                   <input
-                    className="inp pl-10 pr-10 py-2.5 text-sm"
+                    className="inp pl-10 pr-10 py-3 text-sm font-medium"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Ingresa tu contraseña"
+                    placeholder="Tu contrasena"
                     value={p}
                     onChange={(e) => setP(e.target.value)}
                     required
@@ -182,9 +221,8 @@ export default function Login() {
                   <button
                     type="button"
                     tabIndex={-1}
-                    className="absolute right-3 top-3 text-ink/40 hover:text-ink transition"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink/35 hover:text-brand transition"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label="Ver u ocultar contraseña"
                   >
                     {showPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
                   </button>
@@ -195,92 +233,95 @@ export default function Login() {
 
               <button
                 type="submit"
-                className="btn-p w-full py-3 text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                className="btn-p w-full py-3.5 text-sm font-black tracking-wide shadow-lg shadow-brand/25 hover:shadow-brand/40 transition-all"
                 disabled={busy}
               >
-                {busy ? 'Ingresando...' : 'Entrar al sistema'}
+                {busy ? 'Verificando...' : 'Entrar al sistema'}
               </button>
+
+              <p className="text-center text-[11px] text-ink/40 mt-2">
+                Viveres Stalin &copy; {new Date().getFullYear()} &mdash; Todos los derechos reservados
+              </p>
             </form>
-          ) : (
-            <form onSubmit={registrar} className="space-y-3">
+          )}
+
+          {/* FORMULARIO REGISTRO */}
+          {modo === 'registro' && (
+            <form onSubmit={registrar} className="space-y-3.5">
               {regOk && (
-                <div className="rounded-xl bg-emerald-50 border border-emerald-300 p-3 text-xs text-emerald-800 text-center font-bold animate-pulse">
-                  Cuenta creada exitosamente. Redirigiendo al ingreso...
+                <div className="rounded-2xl bg-brand-soft border border-brand/30 p-3.5 text-xs text-brand-dark text-center font-bold">
+                  Cuenta creada. Redirigiendo al ingreso...
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-ink/60 block mb-0.5">Nombres *</label>
+                  <label className="text-[11px] font-bold text-ink/55 block mb-1">Nombres *</label>
                   <input
-                    className={`inp text-xs py-2 ${fieldErrs.nombres ? 'border-red-400 bg-red-50/30' : ''}`}
-                    placeholder="Ej: Alexander"
+                    className={`inp text-xs py-2.5 ${fieldErrs.nombres ? 'border-red-400 ring-1 ring-red-300' : ''}`}
+                    placeholder="Alexander"
                     value={reg.nombres}
                     onChange={setField('nombres')}
                   />
-                  {fieldErrs.nombres && <p className="text-[10px] text-red-600 mt-0.5">{fieldErrs.nombres}</p>}
+                  {fieldErrs.nombres && <p className="text-[10px] text-red-500 mt-0.5 font-medium">{fieldErrs.nombres}</p>}
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-ink/60 block mb-0.5">Apellidos *</label>
+                  <label className="text-[11px] font-bold text-ink/55 block mb-1">Apellidos *</label>
                   <input
-                    className={`inp text-xs py-2 ${fieldErrs.apellidos ? 'border-red-400 bg-red-50/30' : ''}`}
-                    placeholder="Ej: Guamán"
+                    className={`inp text-xs py-2.5 ${fieldErrs.apellidos ? 'border-red-400 ring-1 ring-red-300' : ''}`}
+                    placeholder="Guaman"
                     value={reg.apellidos}
                     onChange={setField('apellidos')}
                   />
-                  {fieldErrs.apellidos && <p className="text-[10px] text-red-600 mt-0.5">{fieldErrs.apellidos}</p>}
+                  {fieldErrs.apellidos && <p className="text-[10px] text-red-500 mt-0.5 font-medium">{fieldErrs.apellidos}</p>}
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-ink/60 block mb-0.5">Correo electrónico *</label>
+                <label className="text-[11px] font-bold text-ink/55 block mb-1">Correo electronico *</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-ink/40"><IconMail className="h-3.5 w-3.5" /></span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/35"><IconMail className="h-3.5 w-3.5" /></span>
                   <input
-                    className={`inp pl-9 text-xs py-2 ${fieldErrs.email ? 'border-red-400 bg-red-50/30' : ''}`}
+                    className={`inp pl-9 text-xs py-2.5 ${fieldErrs.email ? 'border-red-400 ring-1 ring-red-300' : ''}`}
                     type="email"
                     placeholder="correo@ejemplo.com"
                     value={reg.email}
                     onChange={setField('email')}
                   />
                 </div>
-                {fieldErrs.email && <p className="text-[10px] text-red-600 mt-0.5">{fieldErrs.email}</p>}
+                {fieldErrs.email && <p className="text-[10px] text-red-500 mt-0.5 font-medium">{fieldErrs.email}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-ink/60 block mb-0.5">Teléfono (opcional)</label>
+                  <label className="text-[11px] font-bold text-ink/55 block mb-1">Telefono</label>
                   <input
-                    className={`inp text-xs py-2 ${fieldErrs.telefono ? 'border-red-400 bg-red-50/30' : ''}`}
+                    className={`inp text-xs py-2.5 ${fieldErrs.telefono ? 'border-red-400 ring-1 ring-red-300' : ''}`}
                     placeholder="0999000000"
                     value={reg.telefono}
                     onChange={setField('telefono')}
                     inputMode="numeric"
                   />
-                  {fieldErrs.telefono && <p className="text-[10px] text-red-600 mt-0.5">{fieldErrs.telefono}</p>}
+                  {fieldErrs.telefono && <p className="text-[10px] text-red-500 mt-0.5 font-medium">{fieldErrs.telefono}</p>}
                 </div>
-
                 <div>
-                  <label className="text-[11px] font-bold text-ink/60 block mb-0.5">Usuario de acceso *</label>
+                  <label className="text-[11px] font-bold text-ink/55 block mb-1">Usuario de acceso *</label>
                   <input
-                    className={`inp text-xs py-2 ${fieldErrs.username ? 'border-red-400 bg-red-50/30' : ''}`}
+                    className={`inp text-xs py-2.5 ${fieldErrs.username ? 'border-red-400 ring-1 ring-red-300' : ''}`}
                     placeholder="usuario123"
                     value={reg.username}
                     onChange={setField('username')}
                     autoComplete="username"
                   />
-                  {fieldErrs.username && <p className="text-[10px] text-red-600 mt-0.5">{fieldErrs.username}</p>}
+                  {fieldErrs.username && <p className="text-[10px] text-red-500 mt-0.5 font-medium">{fieldErrs.username}</p>}
                 </div>
               </div>
 
-              {/* Contraseña con Ojo */}
               <div>
-                <label className="text-[11px] font-bold text-ink/60 block mb-0.5">
-                  Contraseña (mín. 10 caracteres) *
-                </label>
+                <label className="text-[11px] font-bold text-ink/55 block mb-1">Contrasena (min. 10 caracteres) *</label>
                 <div className="relative">
                   <input
-                    className={`inp pr-9 text-xs py-2 ${fieldErrs.password ? 'border-red-400 bg-red-50/30' : ''}`}
+                    className={`inp pr-9 text-xs py-2.5 ${fieldErrs.password ? 'border-red-400 ring-1 ring-red-300' : ''}`}
                     type={showRegPassword ? 'text' : 'password'}
                     placeholder="Al menos 10 caracteres"
                     value={reg.password}
@@ -290,26 +331,22 @@ export default function Login() {
                   <button
                     type="button"
                     tabIndex={-1}
-                    className="absolute right-2.5 top-2 text-ink/40 hover:text-ink transition"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink/35 hover:text-brand transition"
                     onClick={() => setShowRegPassword(!showRegPassword)}
-                    aria-label="Ver u ocultar contraseña"
                   >
                     {showRegPassword ? <IconEyeOff className="h-3.5 w-3.5" /> : <IconEye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
-                {fieldErrs.password && <p className="text-[10px] text-red-600 mt-0.5">{fieldErrs.password}</p>}
+                {fieldErrs.password && <p className="text-[10px] text-red-500 mt-0.5 font-medium">{fieldErrs.password}</p>}
               </div>
 
-              {/* Confirmar Contraseña con Ojo */}
               <div>
-                <label className="text-[11px] font-bold text-ink/60 block mb-0.5">
-                  Confirmar contraseña *
-                </label>
+                <label className="text-[11px] font-bold text-ink/55 block mb-1">Confirmar contrasena *</label>
                 <div className="relative">
                   <input
-                    className={`inp pr-9 text-xs py-2 ${fieldErrs.confirmar_password ? 'border-red-400 bg-red-50/30' : ''}`}
+                    className={`inp pr-9 text-xs py-2.5 ${fieldErrs.confirmar_password ? 'border-red-400 ring-1 ring-red-300' : ''}`}
                     type={showRegConfirm ? 'text' : 'password'}
-                    placeholder="Repite la contraseña"
+                    placeholder="Repite la contrasena"
                     value={reg.confirmar_password}
                     onChange={setField('confirmar_password')}
                     autoComplete="new-password"
@@ -317,34 +354,26 @@ export default function Login() {
                   <button
                     type="button"
                     tabIndex={-1}
-                    className="absolute right-2.5 top-2 text-ink/40 hover:text-ink transition"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink/35 hover:text-brand transition"
                     onClick={() => setShowRegConfirm(!showRegConfirm)}
-                    aria-label="Ver u ocultar contraseña"
                   >
                     {showRegConfirm ? <IconEyeOff className="h-3.5 w-3.5" /> : <IconEye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
-                {fieldErrs.confirmar_password && <p className="text-[10px] text-red-600 mt-0.5">{fieldErrs.confirmar_password}</p>}
+                {fieldErrs.confirmar_password && <p className="text-[10px] text-red-500 mt-0.5 font-medium">{fieldErrs.confirmar_password}</p>}
               </div>
 
               <ErrorBox error={regErr} />
 
               <button
                 type="submit"
-                className="btn-p w-full py-2.5 text-xs font-bold shadow-md"
+                className="btn-p w-full py-3 text-xs font-black shadow-lg shadow-brand/25 hover:shadow-brand/40 transition-all"
                 disabled={regBusy || regOk}
               >
                 {regBusy ? 'Creando cuenta...' : 'Crear cuenta'}
               </button>
             </form>
           )}
-
-          {/* Footer del card */}
-          <div className="mt-4 pt-3 border-t border-ink/10 text-center">
-            <p className="text-[11px] text-ink/50">
-              Víveres Stalin &copy; {new Date().getFullYear()} • Todos los derechos reservados
-            </p>
-          </div>
         </div>
       </div>
     </div>

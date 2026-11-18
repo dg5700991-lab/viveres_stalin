@@ -256,16 +256,16 @@ export default function ClientePanel() {
 
   // ═══════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-soft/30 via-white to-brand-soft/10 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-brand-soft/40 via-paper to-brand-soft/20 flex flex-col">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-ink/10 shadow-sm">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-forest/15 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt="Víveres Stalin" className="h-9 w-9 rounded-xl shadow-sm ring-1 ring-brand/20 object-contain" />
+            <img src="/viveres-stalin.png" alt="Viveres Stalin" className="h-10 w-10 rounded-xl shadow-sm ring-2 ring-brand/20 object-contain bg-white p-0.5" />
             <div>
-              <p className="font-extrabold text-brand text-sm leading-none">Víveres Stalin</p>
-              <p className="text-[11px] text-ink/50 leading-none mt-0.5">Tienda en línea</p>
+              <p className="font-extrabold text-brand-dark text-sm leading-none">Viveres Stalin</p>
+              <p className="text-[11px] text-ink/50 leading-none mt-0.5">Tienda en linea</p>
             </div>
           </div>
 

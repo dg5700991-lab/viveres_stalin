@@ -92,10 +92,10 @@ function Shell() {
   return (
     <div className="h-screen bg-paper flex flex-col overflow-hidden">
       {/* Header fijo */}
-      <header className="flex-shrink-0 z-20 border-b border-ink/10 bg-white/95 backdrop-blur-sm shadow-xs">
+      <header className="flex-shrink-0 z-20 border-b border-forest/20 bg-white shadow-sm">
         <div className="mx-auto flex max-w-full items-center gap-2 overflow-x-auto px-4 py-2.5 no-scrollbar">
           <div className="mr-4 flex items-center gap-2.5 flex-shrink-0">
-            <img src="/logo.svg" alt="Víveres Stalin" className="h-9 w-9 rounded-xl shadow-sm ring-1 ring-brand/20 object-contain" />
+            <img src="/viveres-stalin.png" alt="Viveres Stalin" className="h-9 w-9 rounded-xl shadow-sm ring-2 ring-brand/20 object-contain bg-white p-0.5" />
             <div>
               <span className="font-black text-brand tracking-tight text-base leading-none block">Víveres Stalin</span>
               <span className="text-[10px] text-ink/50 font-bold uppercase tracking-wider leading-none block mt-0.5">
