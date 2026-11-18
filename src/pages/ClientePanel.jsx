@@ -262,9 +262,7 @@ export default function ClientePanel() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-ink/10 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-white font-black text-xs shadow-sm ring-1 ring-brand/30">
-              VS
-            </span>
+            <img src="/logo.svg" alt="Víveres Stalin" className="h-9 w-9 rounded-xl shadow-sm ring-1 ring-brand/20 object-contain" />
             <div>
               <p className="font-extrabold text-brand text-sm leading-none">Víveres Stalin</p>
               <p className="text-[11px] text-ink/50 leading-none mt-0.5">Tienda en línea</p>

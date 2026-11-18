@@ -95,9 +95,7 @@ function Shell() {
       <header className="flex-shrink-0 z-20 border-b border-ink/10 bg-white/95 backdrop-blur-sm shadow-xs">
         <div className="mx-auto flex max-w-full items-center gap-2 overflow-x-auto px-4 py-2.5 no-scrollbar">
           <div className="mr-4 flex items-center gap-2.5 flex-shrink-0">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark text-white font-black text-xs shadow-sm ring-1 ring-brand/30">
-              VS
-            </span>
+            <img src="/logo.svg" alt="Víveres Stalin" className="h-9 w-9 rounded-xl shadow-sm ring-1 ring-brand/20 object-contain" />
             <div>
               <span className="font-black text-brand tracking-tight text-base leading-none block">Víveres Stalin</span>
               <span className="text-[10px] text-ink/50 font-bold uppercase tracking-wider leading-none block mt-0.5">

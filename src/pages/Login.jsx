@@ -107,8 +107,8 @@ export default function Login() {
 
         {/* Cabecera / Banner con Logo */}
         <div className="bg-gradient-to-r from-brand to-brand-dark px-6 py-7 text-center text-white relative">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-white/25 shadow-inner mb-3">
-            <span className="text-xl font-black tracking-tight text-white">VS</span>
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-1 ring-2 ring-white/30 shadow-lg mb-3">
+            <img src="/logo.svg" alt="Víveres Stalin" className="h-full w-full object-contain rounded-xl" />
           </div>
           <h1 className="text-2xl font-black tracking-tight">Víveres Stalin</h1>
           <p className="text-xs text-white/80 mt-1 font-medium">
