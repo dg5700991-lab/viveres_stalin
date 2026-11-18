@@ -111,8 +111,8 @@ export default function Login() {
 
         <div className="relative z-10 text-center px-10">
           <div className="mb-8 inline-block">
-            <div className="w-40 h-40 mx-auto rounded-3xl bg-white/10 backdrop-blur p-4 ring-1 ring-white/20 shadow-2xl flex items-center justify-center">
-              <img src="/viveres-stalin.png" alt="Viveres Stalin" className="w-full h-full object-contain drop-shadow-xl" />
+            <div className="w-44 h-44 mx-auto rounded-3xl bg-white shadow-2xl ring-4 ring-white/40 flex items-center justify-center p-3">
+              <img src="/viveres-stalin.png" alt="Viveres Stalin" className="w-full h-full object-contain" />
             </div>
           </div>
           <h1 className="text-4xl font-black text-white tracking-tight leading-tight mb-3">
