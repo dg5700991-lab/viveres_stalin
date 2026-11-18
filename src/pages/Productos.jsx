@@ -154,8 +154,8 @@ export default function Productos() {
           <button
             onClick={() => setTab('productos')}
             className={`px-4 py-2 text-sm font-semibold border-b-2 transition -mb-px ${tab === 'productos'
-                ? 'border-brand text-brand'
-                : 'border-transparent text-ink/60 hover:text-ink'
+              ? 'border-brand text-brand'
+              : 'border-transparent text-ink/60 hover:text-ink'
               }`}
           >
             Productos {prods.data && `(${prods.data.length})`}
@@ -163,8 +163,8 @@ export default function Productos() {
           <button
             onClick={() => setTab('categorias')}
             className={`px-4 py-2 text-sm font-semibold border-b-2 transition -mb-px ${tab === 'categorias'
-                ? 'border-brand text-brand'
-                : 'border-transparent text-ink/60 hover:text-ink'
+              ? 'border-brand text-brand'
+              : 'border-transparent text-ink/60 hover:text-ink'
               }`}
           >
             Categorías {cats.data && `(${cats.data.length})`}
@@ -173,8 +173,8 @@ export default function Productos() {
             <button
               onClick={() => setTab('movimientos')}
               className={`px-4 py-2 text-sm font-semibold border-b-2 transition -mb-px ${tab === 'movimientos'
-                  ? 'border-brand text-brand'
-                  : 'border-transparent text-ink/60 hover:text-ink'
+                ? 'border-brand text-brand'
+                : 'border-transparent text-ink/60 hover:text-ink'
                 }`}
             >
               Historial de Movimientos
@@ -186,8 +186,8 @@ export default function Productos() {
           <div className="flex items-center gap-1 pb-1">
             <button
               className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 ${modoVista === 'tarjetas'
-                  ? 'bg-brand text-white shadow-sm'
-                  : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
+                ? 'bg-brand text-white shadow-sm'
+                : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
                 }`}
               onClick={() => setModoVista('tarjetas')}
               title="Ver como tarjetas"
@@ -197,8 +197,8 @@ export default function Productos() {
             </button>
             <button
               className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 ${modoVista === 'tabla'
-                  ? 'bg-brand text-white shadow-sm'
-                  : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
+                ? 'bg-brand text-white shadow-sm'
+                : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
                 }`}
               onClick={() => setModoVista('tabla')}
               title="Ver como tabla"
@@ -343,8 +343,8 @@ export default function Productos() {
                         <div className="absolute top-2 left-2">
                           <span
                             className={`rounded-lg px-2 py-1 text-xs font-bold shadow-sm backdrop-blur-md flex items-center gap-1.5 ${isBajo
-                                ? 'bg-red-600 text-white'
-                                : 'bg-ink/80 text-white'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-ink/80 text-white'
                               }`}
                           >
                             <IconPackage className="h-3.5 w-3.5" />
@@ -356,8 +356,8 @@ export default function Productos() {
                         <div className="absolute top-2 right-2">
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm ${p.activo
-                                ? 'bg-brand text-white'
-                                : 'bg-gray-400 text-white'
+                              ? 'bg-brand text-white'
+                              : 'bg-gray-400 text-white'
                               }`}
                           >
                             {p.activo ? 'ACTIVO' : 'INACTIVO'}
@@ -408,8 +408,8 @@ export default function Productos() {
                       {isAdmin ? (
                         <button
                           className={`btn py-1 px-2.5 text-xs transition ${p.activo
-                              ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                              : 'bg-brand-soft text-brand-dark border border-brand/30 hover:bg-brand-soft/80'
+                            ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                            : 'bg-brand-soft text-brand-dark border border-brand/30 hover:bg-brand-soft/80'
                             }`}
                           title={p.activo ? 'Desactivar producto' : 'Activar producto'}
                           disabled={estaCambiando}
@@ -553,8 +553,8 @@ export default function Productos() {
                         <td className="p-3">
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.activo
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-gray-200 text-gray-700'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-gray-200 text-gray-700'
                               }`}
                           >
                             <span
@@ -570,8 +570,8 @@ export default function Productos() {
                             {isAdmin && (
                               <button
                                 className={`btn py-1 px-2.5 text-xs transition ${p.activo
-                                    ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
-                                    : 'bg-brand-soft text-brand-dark border border-brand/30 hover:bg-brand-soft/80'
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                                  : 'bg-brand-soft text-brand-dark border border-brand/30 hover:bg-brand-soft/80'
                                   }`}
                                 disabled={estaCambiando}
                                 onClick={() => alternarEstado(p)}
@@ -928,8 +928,8 @@ function ModalProducto({ producto, categorias, onClose, onGuardado }) {
           <button
             type="button"
             className={`btn py-1.5 px-4 text-xs font-bold transition shadow-sm flex items-center gap-1.5 ${activo
-                ? 'bg-brand text-white hover:bg-brand-dark'
-                : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+              ? 'bg-brand text-white hover:bg-brand-dark'
+              : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
               }`}
             onClick={() => setActivo(!activo)}
           >
@@ -1254,8 +1254,8 @@ function ModalCategoria({ categoria, onClose, onGuardado }) {
           <button
             type="button"
             className={`btn py-1 px-3 text-xs font-bold transition shadow-sm flex items-center gap-1.5 ${activo
-                ? 'bg-brand text-white hover:bg-brand-dark'
-                : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
+              ? 'bg-brand text-white hover:bg-brand-dark'
+              : 'bg-gray-300 text-gray-800 hover:bg-gray-400'
               }`}
             onClick={() => setActivo(!activo)}
           >
@@ -1417,8 +1417,8 @@ function ModalStock({ producto, onClose, onGuardado }) {
           <button
             type="button"
             className={`py-2 text-xs font-bold rounded-lg transition ${subTab === 'entrada'
-                ? 'bg-brand text-white'
-                : 'bg-brand-soft/60 text-ink/70 hover:bg-brand-soft'
+              ? 'bg-brand text-white'
+              : 'bg-brand-soft/60 text-ink/70 hover:bg-brand-soft'
               }`}
             onClick={() => {
               setSubTab('entrada');
@@ -1430,8 +1430,8 @@ function ModalStock({ producto, onClose, onGuardado }) {
           <button
             type="button"
             className={`py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 ${subTab === 'ajuste'
-                ? 'bg-brand text-white'
-                : 'bg-brand-soft/60 text-ink/70 hover:bg-brand-soft'
+              ? 'bg-brand text-white'
+              : 'bg-brand-soft/60 text-ink/70 hover:bg-brand-soft'
               }`}
             onClick={() => {
               setSubTab('ajuste');

@@ -374,11 +374,10 @@ export default function POS() {
       <div className="lg:hidden flex items-center gap-2 p-1 bg-white rounded-2xl border border-ink/10 shadow-sm flex-shrink-0">
         <button
           type="button"
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
-            vistaMovil === 'catalogo'
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${vistaMovil === 'catalogo'
               ? 'bg-brand text-white shadow-sm'
               : 'text-ink/60 hover:text-ink'
-          }`}
+            }`}
           onClick={() => setVistaMovil('catalogo')}
         >
           <IconTag className="h-3.5 w-3.5" />
@@ -387,11 +386,10 @@ export default function POS() {
 
         <button
           type="button"
-          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${
-            vistaMovil === 'ticket'
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 ${vistaMovil === 'ticket'
               ? 'bg-brand text-white shadow-sm'
               : 'text-ink/60 hover:text-ink'
-          }`}
+            }`}
           onClick={() => setVistaMovil('ticket')}
         >
           <IconCart className="h-3.5 w-3.5" />
@@ -404,9 +402,8 @@ export default function POS() {
           Visible siempre en desktop (lg:), en móvil solo si vistaMovil === 'catalogo'
          ══════════════════════════════════════════════════════════════════════ */}
       <div
-        className={`flex-1 min-w-0 flex flex-col overflow-hidden ${
-          vistaMovil === 'catalogo' ? 'flex' : 'hidden lg:flex'
-        }`}
+        className={`flex-1 min-w-0 flex flex-col overflow-hidden ${vistaMovil === 'catalogo' ? 'flex' : 'hidden lg:flex'
+          }`}
       >
         {/* Barra de Búsqueda rápida */}
         <div className="relative w-full mb-2.5 flex-shrink-0">
@@ -438,11 +435,10 @@ export default function POS() {
         <div className="mb-2.5 flex-shrink-0 overflow-hidden">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
             <button
-              className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex-shrink-0 ${
-                categoriaSeleccionada === ''
+              className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex-shrink-0 ${categoriaSeleccionada === ''
                   ? 'bg-brand text-white shadow-sm'
                   : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
-              }`}
+                }`}
               onClick={() => setCategoriaSeleccionada('')}
             >
               Todos ({prodsLoad.data?.length || 0})
@@ -450,11 +446,10 @@ export default function POS() {
             {(catsLoad.data || []).map((c) => (
               <button
                 key={c.id}
-                className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${
-                  categoriaSeleccionada === c.id
+                className={`whitespace-nowrap rounded-xl px-3.5 py-1.5 text-xs font-semibold transition flex-shrink-0 ${categoriaSeleccionada === c.id
                     ? 'bg-brand text-white shadow-sm'
                     : 'bg-white text-ink/70 hover:bg-brand-soft border border-ink/10'
-                }`}
+                  }`}
                 onClick={() => setCategoriaSeleccionada(c.id)}
               >
                 {c.nombre}
@@ -498,13 +493,12 @@ export default function POS() {
                   <div
                     key={p.id}
                     onClick={(e) => agregarAlCarrito(p, e)}
-                    className={`group relative flex flex-col justify-between rounded-2xl p-2.5 sm:p-3 text-left transition select-none bg-white border ${
-                      isAgotado
+                    className={`group relative flex flex-col justify-between rounded-2xl p-2.5 sm:p-3 text-left transition select-none bg-white border ${isAgotado
                         ? 'opacity-65 border-gray-200 cursor-not-allowed bg-gray-50/50'
                         : enCarro
-                        ? 'border-brand ring-2 ring-brand/30 shadow-md cursor-pointer'
-                        : 'border-ink/10 hover:border-brand/40 hover:shadow-md cursor-pointer'
-                    }`}
+                          ? 'border-brand ring-2 ring-brand/30 shadow-md cursor-pointer'
+                          : 'border-ink/10 hover:border-brand/40 hover:shadow-md cursor-pointer'
+                      }`}
                   >
                     <div>
                       {/* Imagen o Ícono del producto */}
@@ -527,13 +521,12 @@ export default function POS() {
 
                         {/* Badge de Stock semántico */}
                         <span
-                          className={`absolute bottom-1.5 left-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 shadow-sm ${
-                            isAgotado
+                          className={`absolute bottom-1.5 left-1.5 rounded-lg px-2 py-0.5 text-[10px] font-bold flex items-center gap-1 shadow-sm ${isAgotado
                               ? 'bg-red-600 text-white'
                               : isBajo
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-forest/80 text-white'
-                          }`}
+                                ? 'bg-amber-600 text-white'
+                                : 'bg-forest/80 text-white'
+                            }`}
                         >
                           <IconPackage className="h-3 w-3" />
                           {isAgotado ? 'Agotado' : stockTexto}
@@ -671,9 +664,8 @@ export default function POS() {
           Visible siempre en desktop (lg:), en móvil solo si vistaMovil === 'ticket'
          ══════════════════════════════════════════════════════════════════════ */}
       <aside
-        className={`w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col overflow-hidden bg-white border border-brand/20 rounded-2xl sm:rounded-3xl shadow-xl h-full ${
-          vistaMovil === 'ticket' ? 'flex' : 'hidden lg:flex'
-        }`}
+        className={`w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col overflow-hidden bg-white border border-brand/20 rounded-2xl sm:rounded-3xl shadow-xl h-full ${vistaMovil === 'ticket' ? 'flex' : 'hidden lg:flex'
+          }`}
       >
         {/* Encabezado del ticket */}
         <div className="p-3.5 sm:p-4 border-b border-ink/10 flex items-center justify-between flex-shrink-0 bg-white">
@@ -813,11 +805,10 @@ export default function POS() {
               <div className="flex gap-1">
                 <button
                   type="button"
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${
-                    tipoComprobante === 'CONSUMIDOR_FINAL'
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${tipoComprobante === 'CONSUMIDOR_FINAL'
                       ? 'bg-brand text-white shadow-sm'
                       : 'bg-white text-ink/70 border border-ink/15'
-                  }`}
+                    }`}
                   onClick={() => setTipoComprobante('CONSUMIDOR_FINAL')}
                 >
                   <IconBolt className="h-3 w-3" />
@@ -825,11 +816,10 @@ export default function POS() {
                 </button>
                 <button
                   type="button"
-                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${
-                    tipoComprobante === 'FACTURA'
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center gap-1 transition ${tipoComprobante === 'FACTURA'
                       ? 'bg-brand text-white shadow-sm'
                       : 'bg-white text-ink/70 border border-ink/15'
-                  }`}
+                    }`}
                   onClick={() => setTipoComprobante('FACTURA')}
                 >
                   <IconFileText className="h-3 w-3" />
@@ -901,10 +891,10 @@ export default function POS() {
                           (cl.documento || '').toLowerCase().includes(lq)
                         );
                       }).length === 0 && (
-                        <p className="px-3 py-2 text-xs text-ink/50 italic">
-                          No hay clientes registrados con ese nombre o número.
-                        </p>
-                      )}
+                          <p className="px-3 py-2 text-xs text-ink/50 italic">
+                            No hay clientes registrados con ese nombre o número.
+                          </p>
+                        )}
                     </div>
                   )}
                 </div>
@@ -990,10 +980,10 @@ export default function POS() {
                         (cl.documento || '').toLowerCase().includes(lq)
                       );
                     }).length === 0 && (
-                      <p className="px-3 py-2 text-xs text-ink/50 italic">
-                        Cliente no encontrado. Puedes escribir su nombre abajo.
-                      </p>
-                    )}
+                        <p className="px-3 py-2 text-xs text-ink/50 italic">
+                          Cliente no encontrado. Puedes escribir su nombre abajo.
+                        </p>
+                      )}
                   </div>
                 )}
               </div>
@@ -1039,11 +1029,10 @@ export default function POS() {
                 <button
                   key={m}
                   type="button"
-                  className={`py-2 px-1 text-xs font-bold rounded-xl border transition flex flex-col items-center gap-1 text-center ${
-                    metodoPago === m
+                  className={`py-2 px-1 text-xs font-bold rounded-xl border transition flex flex-col items-center gap-1 text-center ${metodoPago === m
                       ? 'bg-brand text-white border-brand shadow-sm'
                       : 'bg-white text-ink/70 border-ink/20 hover:bg-brand-soft'
-                  }`}
+                    }`}
                   onClick={() => setMetodoPago(m)}
                 >
                   <Icon className="h-4 w-4" />
@@ -1110,11 +1099,10 @@ export default function POS() {
                 {/* Banner de Vuelto o Dinero Faltante con alta visibilidad */}
                 {numRecibido > 0 && total > 0 && (
                   <div
-                    className={`rounded-2xl p-3 text-center border-2 transition ${
-                      numRecibido >= total
+                    className={`rounded-2xl p-3 text-center border-2 transition ${numRecibido >= total
                         ? 'bg-brand-soft/70 text-brand-dark border-brand/40'
                         : 'bg-amber-50 text-amber-900 border-amber-300'
-                    }`}
+                      }`}
                   >
                     <span className="text-[11px] uppercase font-black tracking-wider flex items-center justify-center gap-1.5 mb-1">
                       {numRecibido >= total ? (
@@ -1191,8 +1179,8 @@ export default function POS() {
                   {metodoPago === 'EFECTIVO'
                     ? `COBRAR EN EFECTIVO ${money(total)}`
                     : metodoPago === 'TRANSFERENCIA'
-                    ? `REGISTRAR TRANSFERENCIA ${money(total)}`
-                    : `REGISTRAR FIADO ${money(total)}`}
+                      ? `REGISTRAR TRANSFERENCIA ${money(total)}`
+                      : `REGISTRAR FIADO ${money(total)}`}
                 </span>
               </>
             )}
@@ -1224,11 +1212,14 @@ export default function POS() {
         <ModalReponerStockPOS
           producto={productoParaStock}
           onClose={() => setProductoParaStock(null)}
-          onDone={(cant) => {
+          onDone={(cant, pagadoCaja) => {
             setProductoParaStock(null);
-            setNotifStock(`¡Se agregaron ${cant} ${productoParaStock.unidad_medida} al stock de ${productoParaStock.nombre}!`);
+            const msgCaja = pagadoCaja > 0
+              ? ` y se registró una salida de $${pagadoCaja.toFixed(2)} en la caja por pago a distribuidor (cuadre sin desbalance)`
+              : '';
+            setNotifStock(`¡Se agregaron ${cant} ${productoParaStock.unidad_medida} al stock de ${productoParaStock.nombre}${msgCaja}!`);
             prodsLoad.reload();
-            setTimeout(() => setNotifStock(null), 4000);
+            setTimeout(() => setNotifStock(null), 6000);
           }}
         />
       )}
@@ -1239,6 +1230,8 @@ export default function POS() {
 // ─── Modal para Reposición Rápida de Stock desde POS ───────────────────────
 function ModalReponerStockPOS({ producto, onClose, onDone }) {
   const [cantidad, setCantidad] = useState('');
+  const [montoPago, setMontoPago] = useState('');
+  const [descontarCaja, setDescontarCaja] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
@@ -1246,21 +1239,49 @@ function ModalReponerStockPOS({ producto, onClose, onDone }) {
     e.preventDefault();
     const c = Number(cantidad);
     if (isNaN(c) || c <= 0) {
-      setErr({ message: 'Indica una cantidad mayor a 0 para el stock.' });
+      setErr({ message: 'Indica una cantidad de productos válida mayor a 0.' });
       return;
     }
+
+    const valorPagado = Number(montoPago || 0);
+    if (descontarCaja && isNaN(valorPagado)) {
+      setErr({ message: 'Ingresa un valor monetario válido para el pago al distribuidor.' });
+      return;
+    }
+
     setBusy(true);
     setErr(null);
     try {
+      // 1. Registrar entrada en inventario
       await api('/inventario/entradas/', {
         method: 'POST',
         body: {
           producto: producto.id,
           cantidad: c,
-          motivo: 'Reposición rápida desde mostrador de caja',
+          costo_unitario: valorPagado > 0 ? Number((valorPagado / c).toFixed(4)) : undefined,
+          motivo: `Reposición desde mostrador (${c} ${producto.unidad_medida})`,
         },
       });
-      onDone(c);
+
+      // 2. Si se pagó con dinero de caja, registrar salida de caja para evitar desbalance
+      let dineroDescontado = 0;
+      if (descontarCaja && valorPagado > 0) {
+        try {
+          await api('/caja/turnos/movimientos/', {
+            method: 'POST',
+            body: {
+              tipo: 'EGRESO',
+              monto: valorPagado,
+              motivo: `Pago a distribuidor por reposición de ${producto.nombre} (${c} ${producto.unidad_medida})`,
+            },
+          });
+          dineroDescontado = valorPagado;
+        } catch (eCaja) {
+          console.warn('No se pudo registrar egreso de caja (posiblemente no hay turno abierto):', eCaja);
+        }
+      }
+
+      onDone(c, dineroDescontado);
     } catch (x) {
       setErr(x);
     } finally {
@@ -1271,37 +1292,76 @@ function ModalReponerStockPOS({ producto, onClose, onDone }) {
   return (
     <Modal title={`Reponer Stock: ${producto.nombre}`} onClose={onClose}>
       <form onSubmit={guardar} className="space-y-4">
+        {/* Ficha del producto */}
         <div className="rounded-2xl bg-brand-soft/50 p-3.5 flex items-center justify-between text-xs border border-brand/20">
           <div>
             <p className="font-bold text-ink">{producto.nombre}</p>
-            <p className="text-ink/60 text-[11px]">Unidad: {producto.unidad_medida} · Código: {producto.codigo_barras || 'Sin código'}</p>
+            <p className="text-ink/60 text-[11px]">
+              Unidad: {producto.unidad_medida} · Código: {producto.codigo_barras || 'Sin código'}
+            </p>
           </div>
           <div className="text-right">
-            <span className="text-[11px] text-ink/50 block">Stock registrado:</span>
+            <span className="text-[11px] text-ink/50 block">Stock actual:</span>
             <span className="font-black text-brand text-sm">
               {formatStock(producto.stock_actual, producto.unidad_medida)}
             </span>
           </div>
         </div>
 
+        {/* Cantidad recibida */}
         <div>
-          <label className="block text-xs font-black uppercase tracking-wider text-ink/70 mb-1.5">
-            Cantidad que acaba de ingresar ({producto.unidad_medida}) *
+          <label className="block text-xs font-black uppercase tracking-wider text-ink/70 mb-1">
+            Cantidad recibida del distribuidor ({producto.unidad_medida}) *
           </label>
           <input
             type="number"
             step={producto.tipo === 'GRANEL' ? '0.01' : '1'}
             min={producto.tipo === 'GRANEL' ? '0.01' : '1'}
             className="inp text-2xl font-black py-2.5 rounded-2xl"
-            placeholder={producto.tipo === 'GRANEL' ? 'Ej: 2.50' : 'Ej: 10'}
+            placeholder={producto.tipo === 'GRANEL' ? 'Ej: 2.50' : 'Ej: 12'}
             value={cantidad}
             onChange={(e) => setCantidad(e.target.value)}
             required
             autoFocus
           />
-          <p className="text-[11px] text-ink/50 mt-1">
-            Esta cantidad se sumará directamente al inventario de la tienda para que puedas venderla de inmediato.
-          </p>
+        </div>
+
+        {/* Pago al distribuidor y control de cuadre de caja */}
+        <div className="rounded-2xl border border-ink/15 bg-gray-50/70 p-3.5 space-y-3">
+          <div>
+            <label className="block text-xs font-black text-ink/80 mb-1">
+              ¿Cuánto le pagaste al distribuidor en total? (Opcional)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-ink/40">$</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="inp pl-8 text-lg font-black py-2 rounded-xl bg-white"
+                placeholder="0.00 (deja en 0 si no se pagó con dinero de caja)"
+                value={montoPago}
+                onChange={(e) => setMontoPago(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none pt-1">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded text-brand focus:ring-brand"
+              checked={descontarCaja}
+              onChange={(e) => setDescontarCaja(e.target.checked)}
+            />
+            <div className="text-xs">
+              <p className="font-bold text-ink">
+                Descontar este pago del dinero de la Caja (Efectivo de ventas)
+              </p>
+              <p className="text-[11px] text-ink/55 leading-snug mt-0.5">
+                Registra automáticamente una salida de efectivo en la caja del turno activo para que el cuadre y arqueo final no tengan desbalance.
+              </p>
+            </div>
+          </label>
         </div>
 
         <ErrorBox error={err} />
@@ -1311,7 +1371,7 @@ function ModalReponerStockPOS({ producto, onClose, onDone }) {
             Cancelar
           </button>
           <button type="submit" className="btn-p flex-1 py-3 font-black" disabled={busy}>
-            {busy ? 'Guardando…' : 'Sumar al Inventario'}
+            {busy ? 'Registrando…' : 'Sumar al Inventario y Cuadrar'}
           </button>
         </div>
       </form>
@@ -1458,11 +1518,10 @@ function ModalFactura({ factura, onClose }) {
   <p style="text-align:right">Subtotal: ${money(f.subtotal)}</p>
   <p style="text-align:right">IVA 15%: ${money(f.iva)}</p>
   <p class="total">TOTAL: ${money(f.total)}</p>
-  ${
-    f.vuelto > 0
-      ? `<p style="text-align:right">Recibido: ${money(f.efectivoRecibido)}</p><p style="text-align:right;font-weight:bold">Vuelto: ${money(f.vuelto)}</p>`
-      : ''
-  }
+  ${f.vuelto > 0
+        ? `<p style="text-align:right">Recibido: ${money(f.efectivoRecibido)}</p><p style="text-align:right;font-weight:bold">Vuelto: ${money(f.vuelto)}</p>`
+        : ''
+      }
   <div class="sep"></div>
   <p class="footer">¡Gracias por preferir Víveres Stalin!<br>Vuelva pronto.</p>
   <script>window.onload = function() { window.print(); window.close(); };<\/script>
