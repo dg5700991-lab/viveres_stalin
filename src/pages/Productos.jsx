@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import { api, list, money } from '../api';
 import { useAuth } from '../auth';
 import { Spinner, Empty, ErrorBox, Ok, useLoad, Modal } from '../ui';
+import ScannerModal from '../components/ScannerModal';
 import {
   IconSearch,
   IconClose,
@@ -814,6 +815,7 @@ function ModalProducto({ producto, categorias, onClose, onGuardado }) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [camaraAbierta, setCamaraAbierta] = useState(false);
 
   const handleSeleccionarArchivo = (e) => {
     const file = e.target.files?.[0];
@@ -1011,12 +1013,21 @@ function ModalProducto({ producto, categorias, onClose, onGuardado }) {
             </label>
             <div className="mt-1 flex gap-2">
               <input
-                className="inp font-mono"
+                className="inp font-mono flex-1"
                 placeholder="Escanea o escribe el código (4-32 caracteres)"
                 value={codigoBarras}
                 onChange={(e) => setCodigoBarras(e.target.value)}
                 required
               />
+              <button
+                type="button"
+                className="btn-s px-3 py-2 flex items-center gap-1.5 text-xs font-bold whitespace-nowrap hover:bg-brand-soft hover:text-brand"
+                onClick={() => setCamaraAbierta(true)}
+                title="Escanear con la cámara del teléfono"
+              >
+                <IconCamera className="h-4 w-4 text-brand" />
+                <span>Escanear</span>
+              </button>
             </div>
           </div>
         )}
@@ -1178,6 +1189,17 @@ function ModalProducto({ producto, categorias, onClose, onGuardado }) {
           </button>
         </div>
       </form>
+
+      {/* Escáner de cámara para capturar código de barras en el formulario */}
+      <ScannerModal
+        isOpen={camaraAbierta}
+        onClose={() => setCamaraAbierta(false)}
+        onScanProduct={(codigo) => {
+          setCodigoBarras(codigo);
+          setCamaraAbierta(false);
+          return { encontrado: true, producto: { nombre: 'Código escaneado', precio_venta: precioVenta || 0 } };
+        }}
+      />
     </Modal>
   );
 }
@@ -1193,6 +1215,7 @@ function ModalCategoria({ categoria, onClose, onGuardado }) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [camaraAbierta, setCamaraAbierta] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1346,6 +1369,7 @@ function ModalStock({ producto, onClose, onGuardado }) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [camaraAbierta, setCamaraAbierta] = useState(false);
 
   const handleEntrada = async (e) => {
     e.preventDefault();

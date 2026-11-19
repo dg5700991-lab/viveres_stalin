@@ -21,7 +21,9 @@ import {
   IconLock,
   IconUser,
   IconCheck,
+  IconCamera,
 } from '../icons';
+import ScannerModal from '../components/ScannerModal';
 
 export default function POS() {
   const turno = useLoad(async () => {
@@ -48,6 +50,7 @@ export default function POS() {
   const [cantidadInput, setCantidadInput] = useState('1');
   const [productoParaStock, setProductoParaStock] = useState(null);
   const [notifStock, setNotifStock] = useState(null);
+  const [escanerAbierto, setEscanerAbierto] = useState(false);
 
   const [metodoPago, setMetodoPago] = useState('EFECTIVO');
   const [ref, setRef] = useState('');
@@ -254,6 +257,27 @@ export default function POS() {
     }
   };
 
+  const handleScanProductFromCamera = (codigo) => {
+    const codigoLimpio = String(codigo || '').trim();
+    if (!codigoLimpio) return { encontrado: false };
+
+    // 1. Búsqueda instantánea en memoria (0 ms) entre productos cargados
+    const enMemoria = (prodsLoad.data || []).find(
+      (p) => String(p.codigo_barras || '').trim() === codigoLimpio
+    );
+
+    if (enMemoria) {
+      agregarAlCarrito(enMemoria);
+      return { encontrado: true, producto: enMemoria };
+    }
+
+    // 2. Si no estaba en memoria, consultar backend
+    return api(`/productos/por-codigo/${encodeURIComponent(codigoLimpio)}/`).then((p) => {
+      agregarAlCarrito(p);
+      return p;
+    });
+  };
+
   const cobrar = async () => {
     if (cart.length === 0) return;
     setBusy(true);
@@ -405,30 +429,43 @@ export default function POS() {
         className={`flex-1 min-w-0 flex flex-col overflow-hidden ${vistaMovil === 'catalogo' ? 'flex' : 'hidden lg:flex'
           }`}
       >
-        {/* Barra de Búsqueda rápida */}
-        <div className="relative w-full mb-2.5 flex-shrink-0">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40">
-            <IconSearch className="h-4 w-4" />
-          </span>
-          <input
-            ref={inp}
-            autoFocus
-            className="inp text-sm pl-10 pr-10 py-2.5 rounded-2xl border-ink/15 shadow-sm w-full bg-white focus:border-brand"
-            placeholder="Escanear código de barras o escribir nombre del producto..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={scan}
-          />
-          {q && (
-            <button
-              type="button"
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink flex items-center justify-center h-6 w-6 rounded-full hover:bg-gray-100"
-              onClick={() => setQ('')}
-              aria-label="Limpiar búsqueda"
-            >
-              <IconClose className="h-3.5 w-3.5" />
-            </button>
-          )}
+        {/* Barra de Búsqueda rápida y botón de escáner con cámara */}
+        <div className="flex items-center gap-2 mb-2.5 flex-shrink-0">
+          <div className="relative flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40">
+              <IconSearch className="h-4 w-4" />
+            </span>
+            <input
+              ref={inp}
+              autoFocus
+              className="inp text-sm pl-10 pr-10 py-2.5 rounded-2xl border-ink/15 shadow-sm w-full bg-white focus:border-brand"
+              placeholder="Escanear código de barras o escribir producto..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={scan}
+            />
+            {q && (
+              <button
+                type="button"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink flex items-center justify-center h-6 w-6 rounded-full hover:bg-gray-100"
+                onClick={() => setQ('')}
+                aria-label="Limpiar búsqueda"
+              >
+                <IconClose className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="btn-p py-2.5 px-3 sm:px-4 rounded-2xl flex items-center gap-1.5 text-xs font-black shadow-sm whitespace-nowrap active:scale-95 transition"
+            onClick={() => setEscanerAbierto(true)}
+            title="Abrir cámara del teléfono para escanear códigos de barras rápido"
+          >
+            <IconCamera className="h-4 w-4" />
+            <span className="hidden sm:inline">Escanear</span>
+            <span className="sm:hidden">Cámara</span>
+          </button>
         </div>
 
         {/* Píldoras de Categorías */}
@@ -686,14 +723,24 @@ export default function POS() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className="text-xs bg-brand text-white font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 shadow-sm hover:bg-brand-dark transition"
+              onClick={() => setEscanerAbierto(true)}
+              title="Escanear con cámara"
+            >
+              <IconCamera className="h-3.5 w-3.5" />
+              <span>Escanear</span>
+            </button>
+
             {cart.length > 0 && (
               <button
                 type="button"
                 className="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded-lg hover:bg-red-50 transition"
                 onClick={() => setCart([])}
               >
-                Vaciar ticket
+                Vaciar
               </button>
             )}
 
@@ -703,7 +750,7 @@ export default function POS() {
               className="lg:hidden text-xs bg-brand-soft text-brand font-bold px-2.5 py-1.5 rounded-xl hover:bg-brand-soft/80"
               onClick={() => setVistaMovil('catalogo')}
             >
-              + Agregar más
+              + Catálogo
             </button>
           </div>
         </div>
@@ -1224,6 +1271,19 @@ export default function POS() {
           }}
         />
       )}
+
+      {/* Escáner de código de barras con cámara del teléfono (super rápido) */}
+      <ScannerModal
+        isOpen={escanerAbierto}
+        onClose={() => setEscanerAbierto(false)}
+        onScanProduct={handleScanProductFromCamera}
+        cartCount={cart.length}
+        cartTotal={total}
+        onGoToCobrar={() => {
+          setEscanerAbierto(false);
+          setVistaMovil('ticket');
+        }}
+      />
     </div>
   );
 }

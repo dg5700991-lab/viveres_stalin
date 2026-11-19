@@ -103,6 +103,14 @@ export function IconCamera({ className = 'h-4 w-4' }) {
   );
 }
 
+export function IconBarcode({ className = 'h-4 w-4' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14" />
+    </svg>
+  );
+}
+
 export function IconCalculator({ className = 'h-4 w-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
