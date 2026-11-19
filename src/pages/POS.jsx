@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api, list, money } from '../api';
 import { Spinner, Empty, ErrorBox, Ok, useLoad, Modal } from '../ui';
@@ -46,6 +46,12 @@ export default function POS() {
   const [q, setQ] = useState('');
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [cart, setCart] = useState([]);
+  const cartRef = useRef([]);
+  const versionRef = useRef(0);
+  const isSyncingRef = useRef(false);
+  const syncTimerRef = useRef(null);
+  const [sincronizadoRemoto, setSincronizadoRemoto] = useState(false);
+  const [estadoSincronizacion, setEstadoSincronizacion] = useState('idle');
   const [productoParaCantidad, setProductoParaCantidad] = useState(null);
   const [cantidadInput, setCantidadInput] = useState('1');
   const [productoParaStock, setProductoParaStock] = useState(null);
@@ -123,6 +129,84 @@ export default function POS() {
   const vuelto = numRecibido > total ? numRecibido - total : 0;
   const falta = numRecibido < total ? total - numRecibido : 0;
 
+  // Sincronizar carrito local con el servidor (para compartir en vivo entre Tablet y Celular)
+  const syncCartToBackend = useCallback((newCart) => {
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+    }
+
+    setEstadoSincronizacion('syncing');
+    syncTimerRef.current = setTimeout(async () => {
+      isSyncingRef.current = true;
+      try {
+        const res = await api('/caja/turnos/carrito/', {
+          method: 'PUT',
+          body: { items: newCart },
+        });
+        if (res?.version !== undefined) {
+          versionRef.current = res.version;
+        }
+        setEstadoSincronizacion('synced');
+      } catch (e) {
+        console.warn('Error al sincronizar carrito con el servidor:', e);
+        setEstadoSincronizacion('error');
+      } finally {
+        isSyncingRef.current = false;
+        syncTimerRef.current = null;
+      }
+    }, 180);
+  }, []);
+
+  // Actualizador universal de carrito que sincroniza automáticamente con el backend
+  const updateCart = useCallback(
+    (updater) => {
+      const curr = cartRef.current;
+      const next = typeof updater === 'function' ? updater(curr) : updater;
+      cartRef.current = next;
+      setCart(next);
+      syncCartToBackend(next);
+    },
+    [syncCartToBackend]
+  );
+
+  // Sondeo en tiempo real para sincronizar Tablet y Celular con la misma cuenta
+  useEffect(() => {
+    let activo = true;
+
+    const pullRemoteCart = async () => {
+        if (isSyncingRef.current || syncTimerRef.current) return;
+        try {
+          const res = await api('/caja/turnos/carrito/');
+          if (!activo) return;
+          if (res && res.version !== undefined) {
+            if (res.version !== versionRef.current) {
+              versionRef.current = res.version;
+              const itemsRemotos = res.items || [];
+              cartRef.current = itemsRemotos;
+              setCart(itemsRemotos);
+              setEstadoSincronizacion('synced');
+              setSincronizadoRemoto(true);
+              setTimeout(() => {
+                if (activo) setSincronizadoRemoto(false);
+              }, 2500);
+            }
+          }
+        } catch (_) {}
+      };
+
+    pullRemoteCart();
+    const intervalo = setInterval(pullRemoteCart, 1500);
+
+    return () => {
+      activo = false;
+      clearInterval(intervalo);
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const agregarAlCarrito = (p, e) => {
     e?.stopPropagation();
     setErr(null);
@@ -146,7 +230,7 @@ export default function POS() {
       return;
     }
 
-    setCart((curr) => {
+    updateCart((curr) => {
       const existe = curr.find((x) => x.id === p.id);
       if (existe) {
         return curr.map((x) =>
@@ -171,7 +255,7 @@ export default function POS() {
   const cambiarCantidad = (id, delta, e) => {
     e?.stopPropagation();
     setErr(null);
-    setCart((curr) => {
+    updateCart((curr) => {
       const item = curr.find((x) => x.id === id);
       if (!item) return curr;
 
@@ -194,7 +278,7 @@ export default function POS() {
 
   const quitarItem = (id, e) => {
     e?.stopPropagation();
-    setCart((curr) => curr.filter((x) => x.id !== id));
+    updateCart((curr) => curr.filter((x) => x.id !== id));
   };
 
   const abrirModalCantidad = (p, e) => {
@@ -221,7 +305,7 @@ export default function POS() {
       return;
     }
 
-    setCart((curr) => {
+    updateCart((curr) => {
       const existe = curr.find((x) => x.id === p.id);
       if (existe) {
         return curr.map((x) => (x.id === p.id ? { ...x, cantidad: cant } : x));
@@ -356,7 +440,7 @@ export default function POS() {
         efectivoRecibido: Number(recibido || total),
       });
 
-      setCart([]);
+      updateCart([]);
       setRef('');
       setRecibido('');
       setNombreFiado('');
@@ -720,6 +804,18 @@ export default function POS() {
                   ? 'Sin productos seleccionados'
                   : `${cart.length} producto${cart.length !== 1 ? 's' : ''} (${totalItemsCount} u.)`}
               </p>
+              {sincronizadoRemoto && (
+                <p className="text-[10px] font-bold text-emerald-600">Actualizado desde otro dispositivo</p>
+              )}
+              {!sincronizadoRemoto && estadoSincronizacion === 'syncing' && (
+                <p className="text-[10px] font-bold text-amber-600">Sincronizando...</p>
+              )}
+              {!sincronizadoRemoto && estadoSincronizacion === 'synced' && (
+                <p className="text-[10px] font-bold text-emerald-600">Sincronizado</p>
+              )}
+              {!sincronizadoRemoto && estadoSincronizacion === 'error' && (
+                <p className="text-[10px] font-bold text-red-600">No se pudo sincronizar</p>
+              )}
             </div>
           </div>
 
@@ -738,7 +834,7 @@ export default function POS() {
               <button
                 type="button"
                 className="text-xs text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded-lg hover:bg-red-50 transition"
-                onClick={() => setCart([])}
+                onClick={() => updateCart([])}
               >
                 Vaciar
               </button>
@@ -809,7 +905,7 @@ export default function POS() {
                         onChange={(e) => {
                           const v = parseFloat(e.target.value);
                           if (!isNaN(v) && v > 0) {
-                            setCart((curr) =>
+                            updateCart((curr) =>
                               curr.map((x) => (x.id === c.id ? { ...x, cantidad: v } : x))
                             );
                           }
