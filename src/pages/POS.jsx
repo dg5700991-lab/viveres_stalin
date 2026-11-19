@@ -702,7 +702,7 @@ export default function POS() {
           Visible siempre en desktop (lg:), en móvil solo si vistaMovil === 'ticket'
          ══════════════════════════════════════════════════════════════════════ */}
       <aside
-        className={`w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col overflow-hidden bg-white border border-brand/20 rounded-2xl sm:rounded-3xl shadow-xl flex-1 min-h-0 lg:h-full ${vistaMovil === 'ticket' ? 'flex' : 'hidden lg:flex'
+        className={`w-full lg:w-[350px] xl:w-[380px] lg:flex-none flex-shrink-0 flex flex-col overflow-hidden bg-white border border-brand/20 rounded-2xl sm:rounded-3xl shadow-xl flex-1 min-h-0 lg:h-full ${vistaMovil === 'ticket' ? 'flex' : 'hidden lg:flex'
           }`}
       >
         {/* Encabezado del ticket */}

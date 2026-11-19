@@ -1,33 +1,87 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { playBeepSuccess, playBeepError } from '../utils/scannerAudio';
-import { IconClose, IconCart } from '../icons';
+import { IconClose, IconCart, IconBarcode, IconCameraSwitch, IconFlash } from '../icons';
 import { money } from '../api';
 
-export default function ScannerModal({ isOpen, onClose, onScanProduct, cartCount = 0, cartTotal = 0, onGoToCobrar }) {
+function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent || ''
+  );
+}
+
+export default function ScannerModal({
+  isOpen,
+  onClose,
+  onScanProduct,
+  cartCount = 0,
+  cartTotal = 0,
+  onGoToCobrar,
+}) {
   const [iniciado, setIniciado] = useState(false);
   const [errorCamara, setErrorCamara] = useState(null);
   const [torchDisponible, setTorchDisponible] = useState(false);
   const [torchEncendido, setTorchEncendido] = useState(false);
-  const [ultimoResultado, setUltimoResultado] = useState(null); // { ok: bool, texto: string, nombre?: string, precio?: number }
-  
-  const qrCodeRef = useRef(null);
+  const [camarasDisponibles, setCamarasDisponibles] = useState([]);
+  const [camaraIndex, setCamaraIndex] = useState(0);
+  const [cambiandoCamara, setCambiandoCamara] = useState(false);
+  const [esPC, setEsPC] = useState(false);
+  const [ultimoResultado, setUltimoResultado] = useState(null);
+
+  const scannerRef = useRef(null);
+  const isTransitioningRef = useRef(false);
   const ultimoCodigoRef = useRef(null);
   const ultimoTiempoRef = useRef(0);
+  const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    if (!isOpen) {
-      detenerCamara();
-      return;
+  // Detener el escáner y liberar la cámara
+  const detenerCamara = useCallback(async () => {
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    try {
+      if (scannerRef.current) {
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop().catch(() => {});
+        }
+        await scannerRef.current.clear().catch(() => {});
+        scannerRef.current = null;
+      }
+    } catch (e) {
+      console.warn('Error al detener cámara:', e);
+    } finally {
+      if (isMountedRef.current) {
+        setIniciado(false);
+        setTorchEncendido(false);
+      }
+      isTransitioningRef.current = false;
     }
+  }, []);
 
-    let isMounted = true;
-    setErrorCamara(null);
-    setUltimoResultado(null);
+  // Iniciar el lector con una configuración específica
+  const iniciarLector = useCallback(
+    async (cameraConfig) => {
+      if (isTransitioningRef.current) return;
+      isTransitioningRef.current = true;
 
-    const iniciarCamara = async () => {
+      if (isMountedRef.current) {
+        setErrorCamara(null);
+        setTorchEncendido(false);
+      }
+
       try {
-        // Formatos estándar de retail y abarrotes
+        // Detener scanner previo si existía
+        if (scannerRef.current) {
+          try {
+            if (scannerRef.current.isScanning) {
+              await scannerRef.current.stop().catch(() => {});
+            }
+            await scannerRef.current.clear().catch(() => {});
+          } catch (_) {}
+          scannerRef.current = null;
+        }
+
+        // Formatos de retail y abarrotes
         const formats = [
           Html5QrcodeSupportedFormats.EAN_13,
           Html5QrcodeSupportedFormats.EAN_8,
@@ -39,46 +93,43 @@ export default function ScannerModal({ isOpen, onClose, onScanProduct, cartCount
           Html5QrcodeSupportedFormats.ITF,
         ];
 
-        const html5QrCode = new Html5Qrcode('pos-barcode-scanner', {
+        const html5Qr = new Html5Qrcode('pos-barcode-scanner', {
           formatsToSupport: formats,
           verbose: false,
         });
-        qrCodeRef.current = html5QrCode;
+        scannerRef.current = html5Qr;
 
         const config = {
-          fps: 25, // 25 fps para lectura instantánea ultra veloz
+          fps: 26,
           qrbox: (viewfinderWidth, viewfinderHeight) => {
-            // Rectángulo horizontal ideal para códigos de barras de empaques
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const w = Math.min(viewfinderWidth * 0.85, 320);
-            const h = Math.min(minEdge * 0.45, 170);
+            const w = Math.min(viewfinderWidth * 0.88, 340);
+            const h = Math.min(minEdge * 0.48, 175);
             return { width: Math.round(w), height: Math.max(Math.round(h), 120) };
           },
           aspectRatio: 1.0,
           disableFlip: false,
         };
 
-        await html5QrCode.start(
-          { facingMode: 'environment' }, // Cámara trasera del teléfono
+        await html5Qr.start(
+          cameraConfig,
           config,
           (decodedText) => {
             const ahora = Date.now();
             const codigo = decodedText.trim();
             if (!codigo) return;
 
-            // Evitar escaneo duplicado del mismo producto si ocurre dentro de 1.4 segundos
-            if (codigo === ultimoCodigoRef.current && ahora - ultimoTiempoRef.current < 1400) {
+            // Cooldown de 1.3s para evitar duplicados del mismo artículo
+            if (codigo === ultimoCodigoRef.current && ahora - ultimoTiempoRef.current < 1300) {
               return;
             }
 
             ultimoCodigoRef.current = codigo;
             ultimoTiempoRef.current = ahora;
 
-            // Procesar el código escaneado
             if (onScanProduct) {
               const res = onScanProduct(codigo);
               if (res && res.then) {
-                // Si retorna una promesa (búsqueda en backend)
                 res
                   .then((p) => {
                     playBeepSuccess();
@@ -115,181 +166,322 @@ export default function ScannerModal({ isOpen, onClose, onScanProduct, cartCount
               }
             }
           },
-          () => {
-            // Callback de frame no detectado (silencioso para máxima velocidad)
-          }
+          () => {}
         );
 
-        if (isMounted) {
+        if (isMountedRef.current) {
           setIniciado(true);
-          // Verificar si el teléfono soporta flash/torch
           try {
-            const track = html5QrCode.getRunningTrackCameraCapabilities();
+            const track = html5Qr.getRunningTrackCameraCapabilities();
             if (track && track.torchFeature && track.torchFeature().isSupported()) {
               setTorchDisponible(true);
+            } else {
+              setTorchDisponible(false);
             }
           } catch (_) {
-            // Torch no soportado en este dispositivo
+            setTorchDisponible(false);
           }
         }
       } catch (err) {
-        if (isMounted) {
-          console.error('Error al inicializar cámara:', err);
-          setErrorCamara(
-            'No se pudo acceder a la cámara. Asegúrate de otorgar los permisos de cámara en tu navegador.'
-          );
+        if (isMountedRef.current) {
+          console.error('Error al iniciar cámara:', err);
+          const msg = String(err?.message || err || '');
+          if (msg.includes('NotReadableError') || msg.includes('Could not start video source')) {
+            setErrorCamara(
+              'La cámara no se puede abrir porque otra ventana o programa la está usando. Cierra otras pestañas y reintenta.'
+            );
+          } else if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+            setErrorCamara('Permiso de cámara denegado. Permite el acceso a la cámara en el navegador.');
+          } else {
+            setErrorCamara('No se pudo iniciar la cámara en este dispositivo.');
+          }
         }
+      } finally {
+        isTransitioningRef.current = false;
+        if (isMountedRef.current) {
+          setCambiandoCamara(false);
+        }
+      }
+    },
+    [onScanProduct]
+  );
+
+  // Ciclo de vida cuando se abre o cierra el modal
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    if (!isOpen) {
+      detenerCamara();
+      return;
+    }
+
+    const dispositivoEsPC = !isMobileDevice();
+    setEsPC(dispositivoEsPC);
+
+    const arrancar = async () => {
+      try {
+        let cameras = [];
+        try {
+          cameras = await Html5Qrcode.getCameras();
+        } catch (e) {
+          console.warn('No se pudieron listar cámaras explícitamente:', e);
+        }
+
+        if (isMountedRef.current) {
+          setCamarasDisponibles(cameras);
+        }
+
+        let configToUse;
+
+        if (dispositivoEsPC) {
+          // EN COMPUTADORA (PC / LAPTOP):
+          // Las PCs no tienen cámara trasera; usar la cámara web frontal directamente
+          if (cameras.length > 0) {
+            configToUse = cameras[0].id;
+            if (isMountedRef.current) setCamaraIndex(0);
+          } else {
+            configToUse = { facingMode: 'user' };
+          }
+        } else {
+          // EN TELÉFONO MÓVIL / TABLET:
+          // Priorizar la cámara trasera principal
+          if (cameras.length > 0) {
+            const idxBack = cameras.findIndex((c) =>
+              /back|rear|trasera|environment|posterior|camera2\s*0/i.test(c.label || '')
+            );
+            const targetIdx = idxBack !== -1 ? idxBack : cameras.length - 1;
+            if (isMountedRef.current) setCamaraIndex(targetIdx);
+            configToUse = cameras[targetIdx].id;
+          } else {
+            configToUse = { facingMode: 'environment' };
+          }
+        }
+
+        await iniciarLector(configToUse);
+      } catch (err) {
+        console.error('Error general en inicio:', err);
       }
     };
 
-    iniciarCamara();
+    arrancar();
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       detenerCamara();
     };
-  }, [isOpen]);
+  }, [isOpen, iniciarLector, detenerCamara]);
 
-  const detenerCamara = () => {
-    if (qrCodeRef.current) {
-      try {
-        if (qrCodeRef.current.isScanning) {
-          qrCodeRef.current.stop().catch(() => {});
-        }
-        qrCodeRef.current.clear();
-      } catch (e) {
-        console.warn('Error al detener cámara:', e);
-      }
-      qrCodeRef.current = null;
+  // Cambiar cámara si hay más de una (o en móvil)
+  const cambiarCamara = async () => {
+    if (cambiandoCamara || isTransitioningRef.current) return;
+    setCambiandoCamara(true);
+
+    if (camarasDisponibles.length > 1) {
+      const nuevoIndex = (camaraIndex + 1) % camarasDisponibles.length;
+      setCamaraIndex(nuevoIndex);
+      await iniciarLector(camarasDisponibles[nuevoIndex].id);
+    } else {
+      const modoAlterno = camaraIndex === 0 ? 'user' : 'environment';
+      setCamaraIndex(camaraIndex === 0 ? 1 : 0);
+      await iniciarLector({ facingMode: modoAlterno });
     }
-    setIniciado(false);
-    setTorchEncendido(false);
   };
 
+  // Linterna / Flash
   const toggleTorch = async () => {
-    if (!qrCodeRef.current || !torchDisponible) return;
+    if (!scannerRef.current || !torchDisponible) return;
     try {
       const nuevoEstado = !torchEncendido;
-      await qrCodeRef.current.applyVideoConstraints({
+      await scannerRef.current.applyVideoConstraints({
         advanced: [{ torch: nuevoEstado }],
       });
       setTorchEncendido(nuevoEstado);
     } catch (e) {
-      console.warn('No se pudo activar la linterna:', e);
+      console.warn('No se pudo activar linterna:', e);
     }
   };
 
   if (!isOpen) return null;
 
+  // Etiqueta legible de la cámara actual
+  const camaraActualLabel = esPC
+    ? 'Cámara Web (PC)'
+    : camarasDisponibles.length > 0
+    ? /back|rear|trasera|environment/i.test(camarasDisponibles[camaraIndex]?.label || '')
+      ? 'Cámara Trasera'
+      : 'Cámara Frontal'
+    : camaraIndex === 0
+    ? 'Cámara Trasera'
+    : 'Cámara Frontal';
+
+  // Mostrar botón de voltear cámara si hay múltiples cámaras o si es móvil
+  const mostrarBotonVoltear = !esPC || camarasDisponibles.length > 1;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-2 sm:p-4 animate-fadeIn">
-      <div className="relative w-full max-w-md bg-ink rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-2 sm:p-4 animate-fadeIn">
+      <div className="relative w-full max-w-lg bg-neutral-950 rounded-[28px] overflow-hidden shadow-2xl border border-white/15 flex flex-col max-h-[94vh]">
         
-        {/* Cabecera del Escáner */}
-        <div className="flex items-center justify-between px-4 py-3 bg-ink/90 border-b border-white/10 text-white flex-shrink-0 z-10">
-          <div className="flex items-center gap-2">
-            <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
-            <h3 className="font-bold text-sm tracking-tight">Escáner de Código de Barras</h3>
+        {/* ── CABECERA DEL ESCÁNER ── */}
+        <div className="flex items-center justify-between px-4 py-3.5 bg-neutral-900/90 border-b border-white/10 text-white flex-shrink-0 z-20 backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </span>
+            <div>
+              <h3 className="font-extrabold text-sm tracking-tight leading-none text-white">
+                Escáner de Código de Barras
+              </h3>
+              <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">
+                {camaraActualLabel} · {iniciado ? 'Lectura activa' : 'Iniciando…'}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            {/* Botón para cambiar cámara (sólo si hay opciones disponibles) */}
+            {mostrarBotonVoltear && (
+              <button
+                type="button"
+                className={`p-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border active:scale-95 ${
+                  cambiandoCamara
+                    ? 'bg-white/20 text-white/50 border-white/10'
+                    : 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+                }`}
+                onClick={cambiarCamara}
+                disabled={cambiandoCamara}
+                title="Cambiar de Cámara"
+              >
+                <IconCameraSwitch className="h-4 w-4 text-emerald-400" />
+                <span className="hidden sm:inline text-[11px]">Voltear</span>
+              </button>
+            )}
+
+            {/* Botón Flash / Linterna en teléfonos con soporte */}
             {torchDisponible && (
               <button
                 type="button"
-                className={`p-2 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
+                className={`p-2 rounded-xl text-xs font-bold transition flex items-center gap-1 border active:scale-95 ${
                   torchEncendido
-                    ? 'bg-amber-400 text-ink shadow-md'
-                    : 'bg-white/10 text-white hover:bg-white/20'
+                    ? 'bg-amber-400 text-neutral-950 border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]'
+                    : 'bg-white/10 hover:bg-white/20 text-white border-white/15'
                 }`}
                 onClick={toggleTorch}
                 title="Encender / Apagar Linterna"
               >
-                <span>{torchEncendido ? '🔦 Linterna ON' : '🔦 Flash'}</span>
+                <IconFlash className="h-4 w-4" />
+                <span className="hidden sm:inline text-[11px]">{torchEncendido ? 'ON' : 'Flash'}</span>
               </button>
             )}
 
+            {/* Botón Cerrar */}
             <button
               type="button"
-              className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/10 transition active:scale-95"
               onClick={onClose}
               aria-label="Cerrar escáner"
             >
-              <IconClose className="h-5 w-5" />
+              <IconClose className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {/* Visor de Cámara con Marco Guía */}
-        <div className="relative flex-1 min-h-[320px] max-h-[460px] bg-black flex items-center justify-center overflow-hidden">
+        {/* ── VISOR DE CÁMARA ── */}
+        <div className="relative flex-1 min-h-[340px] max-h-[480px] bg-black flex items-center justify-center overflow-hidden">
           {/* Contenedor del video html5-qrcode */}
           <div id="pos-barcode-scanner" className="w-full h-full object-cover" />
 
-          {/* Animación de línea láser de escaneo */}
+          {/* Animación del visor y retícula de escaneo */}
           {iniciado && !errorCamara && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <div className="relative w-[85%] max-w-[320px] h-[160px] rounded-2xl border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] overflow-hidden">
-                {/* Esquinas guía reforzadas */}
-                <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-emerald-400" />
-                <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-emerald-400" />
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-emerald-400" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-emerald-400" />
+              <div className="relative w-[86%] max-w-[340px] h-[175px] rounded-3xl border-2 border-emerald-400/90 shadow-[0_0_25px_rgba(16,185,129,0.35)] overflow-hidden bg-emerald-500/5">
+                {/* Esquinas guía */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-xl" />
                 
-                {/* Línea láser animada */}
-                <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_#ef4444] animate-bounce" />
+                {/* Láser de escaneo animado */}
+                <div className="w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_12px_#ef4444] animate-bounce" />
               </div>
 
-              <p className="mt-3 text-xs font-semibold text-white/80 bg-black/60 px-3 py-1 rounded-full backdrop-blur-xs">
-                Apunta al código de barras del producto
-              </p>
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-white/90 bg-neutral-900/80 px-3.5 py-1.5 rounded-full backdrop-blur-md border border-white/10 shadow-lg">
+                <IconBarcode className="h-4 w-4 text-emerald-400" />
+                <span>Apunta al código de barras del producto</span>
+              </div>
             </div>
           )}
 
           {/* Mensaje de error si la cámara falla */}
           {errorCamara && (
-            <div className="p-6 text-center text-white space-y-3 z-10">
-              <div className="h-12 w-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto text-xl font-black">
+            <div className="p-6 text-center text-white space-y-3 z-20 max-w-sm mx-auto">
+              <div className="h-14 w-14 rounded-2xl bg-red-500/20 text-red-400 flex items-center justify-center mx-auto text-2xl font-black border border-red-500/30">
                 !
               </div>
-              <p className="text-sm font-bold text-red-300">{errorCamara}</p>
-              <button
-                type="button"
-                className="btn-p py-2 px-4 text-xs font-bold mt-2"
-                onClick={onClose}
-              >
-                Cerrar y usar teclado
-              </button>
+              <p className="text-sm font-bold text-red-200 leading-snug">{errorCamara}</p>
+              <div className="flex gap-2 justify-center pt-2">
+                <button
+                  type="button"
+                  className="btn-p py-2.5 px-4 text-xs font-black shadow-lg"
+                  onClick={() => {
+                    const cfg = esPC
+                      ? (camarasDisponibles[0]?.id || { facingMode: 'user' })
+                      : (camarasDisponibles[camaraIndex]?.id || { facingMode: 'environment' });
+                    iniciarLector(cfg);
+                  }}
+                >
+                  Reintentar Cámara
+                </button>
+                <button
+                  type="button"
+                  className="py-2.5 px-4 rounded-xl text-xs font-bold bg-neutral-800 text-white hover:bg-neutral-700 border border-white/20 transition active:scale-95"
+                  onClick={onClose}
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Banner de feedback del último producto escaneado */}
+          {/* Banner de producto escaneado (HUD) */}
           {ultimoResultado && (
             <div
-              className={`absolute top-3 left-3 right-3 z-20 p-2.5 rounded-2xl shadow-xl backdrop-blur-md border animate-fadeIn transition flex items-center justify-between gap-2 ${
+              className={`absolute top-3 left-3 right-3 z-30 p-3 rounded-2xl shadow-2xl backdrop-blur-xl border transition-all animate-fadeIn flex items-center justify-between gap-3 ${
                 ultimoResultado.ok
-                  ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200'
-                  : 'bg-red-950/90 border-red-500/50 text-red-200'
+                  ? 'bg-neutral-900/95 border-emerald-500/60 shadow-[0_10px_25px_rgba(16,185,129,0.25)] text-emerald-300'
+                  : 'bg-neutral-900/95 border-red-500/60 shadow-[0_10px_25px_rgba(239,68,68,0.25)] text-red-300'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-base flex-shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className={`h-9 w-9 rounded-xl flex items-center justify-center text-lg font-black flex-shrink-0 ${
+                    ultimoResultado.ok
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}
+                >
                   {ultimoResultado.ok ? '✓' : '✗'}
-                </span>
+                </div>
+
                 <div className="min-w-0 text-left">
                   {ultimoResultado.ok ? (
                     <>
-                      <p className="text-xs font-black text-white truncate">
+                      <p className="text-sm font-black text-white truncate leading-tight">
                         {ultimoResultado.nombre}
                       </p>
-                      <p className="text-[10px] text-emerald-300 font-mono">
-                        {money(ultimoResultado.precio)} · Código: {ultimoResultado.texto}
+                      <p className="text-xs text-emerald-400 font-extrabold mt-0.5">
+                        {money(ultimoResultado.precio)}{' '}
+                        <span className="text-[10px] text-white/50 font-normal font-mono">
+                          · {ultimoResultado.texto}
+                        </span>
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-xs font-black text-white truncate">
+                      <p className="text-sm font-black text-white truncate leading-tight">
                         Código no encontrado
                       </p>
-                      <p className="text-[10px] text-red-300 font-mono">
+                      <p className="text-[11px] text-red-300 font-mono mt-0.5">
                         {ultimoResultado.texto}
                       </p>
                     </>
@@ -297,28 +489,31 @@ export default function ScannerModal({ isOpen, onClose, onScanProduct, cartCount
                 </div>
               </div>
 
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-white/20 text-white flex-shrink-0">
-                {ultimoResultado.ok ? '+1 en Ticket' : 'No registrado'}
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-xl flex-shrink-0 shadow-sm ${
+                  ultimoResultado.ok
+                    ? 'bg-emerald-500 text-neutral-950 font-black'
+                    : 'bg-red-500/30 text-red-200 border border-red-500/40'
+                }`}
+              >
+                {ultimoResultado.ok ? '+1 en Ticket' : 'Sin registro'}
               </span>
             </div>
           )}
         </div>
 
-        {/* Barra inferior con Total acumulado y botón de Cobro */}
-        <div className="p-3 bg-ink/95 border-t border-white/10 flex items-center justify-between gap-2 text-white flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white">
-              <IconCart className="h-4 w-4" />
+        {/* ── BARRA INFERIOR DE ACCIONES Y TOTAL ── */}
+        <div className="p-3.5 bg-neutral-900 border-t border-white/10 flex items-center justify-between gap-3 text-white flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white border border-white/10 shadow-sm">
+              <IconCart className="h-5 w-5 text-emerald-400" />
             </span>
             <div>
-              <p className="text-[10px] text-white/60 uppercase font-bold tracking-wider">
-                Total acumulado
+              <p className="text-[10px] text-white/60 uppercase font-black tracking-wider leading-none">
+                Ticket ({cartCount} {cartCount === 1 ? 'item' : 'items'})
               </p>
-              <p className="text-base font-black text-emerald-400 leading-none">
-                {money(cartTotal)}{' '}
-                <span className="text-xs font-semibold text-white/70">
-                  ({cartCount} {cartCount === 1 ? 'item' : 'items'})
-                </span>
+              <p className="text-lg font-black text-emerald-400 leading-tight mt-0.5">
+                {money(cartTotal)}
               </p>
             </div>
           </div>
@@ -326,14 +521,14 @@ export default function ScannerModal({ isOpen, onClose, onScanProduct, cartCount
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition"
+              className="py-2.5 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition border border-white/10 active:scale-95"
               onClick={onClose}
             >
               Seguir
             </button>
             <button
               type="button"
-              className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-xs font-black text-white shadow-lg flex items-center gap-1.5 transition"
+              className="py-2.5 px-4 sm:px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-xs font-black text-white shadow-lg flex items-center gap-1.5 transition border border-emerald-400/40"
               onClick={() => {
                 onClose();
                 if (onGoToCobrar) onGoToCobrar();
