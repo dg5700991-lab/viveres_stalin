@@ -434,10 +434,10 @@ export default function ClientePanel() {
                         inCart ? 'border-brand ring-2 ring-brand/20' : 'border-ink/10'
                       } ${sinStock ? 'opacity-50' : ''}`}
                     >
-                      {/* Imagen — sin onClick, solo visual */}
-                      <div className="relative h-28 w-full mb-2 rounded-xl overflow-hidden bg-brand-soft/20 flex items-center justify-center">
+                      {/* Imagen con proporción completa limpia sin recortes */}
+                      <div className="relative h-32 w-full mb-2 rounded-xl overflow-hidden bg-gray-50 border border-ink/5 flex items-center justify-center p-2">
                         {p.imagen_url ? (
-                          <img src={p.imagen_url} alt={p.nombre} className="h-full w-full object-cover" />
+                          <img src={p.imagen_url} alt={p.nombre} className="max-h-full max-w-full object-contain" loading="lazy" />
                         ) : (
                           <span className="text-ink/20">
                             {p.tipo === 'CODIGO' ? <IconTag className="h-10 w-10" /> : <IconScale className="h-10 w-10" />}

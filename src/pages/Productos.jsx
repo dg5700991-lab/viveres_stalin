@@ -12,6 +12,7 @@ import {
   IconGrid,
   IconList,
   IconCheck,
+  IconCash,
 } from '../icons';
 
 const UNIDADES = [
@@ -321,13 +322,14 @@ export default function Productos() {
                       }`}
                   >
                     <div>
-                      {/* Imagen con badges superpuestos */}
-                      <div className="relative mb-3 h-36 w-full rounded-xl overflow-hidden bg-brand-soft/40 border border-ink/10 flex items-center justify-center">
+                      {/* Imagen con badges superpuestos (proporción limpia sin recorte) */}
+                      <div className="relative mb-3 h-36 w-full rounded-xl overflow-hidden bg-gray-50 border border-ink/10 flex items-center justify-center p-2">
                         {p.imagen_url ? (
                           <img
                             src={p.imagen_url}
                             alt={p.nombre}
-                            className="h-full w-full object-cover"
+                            className="max-h-full max-w-full object-contain"
+                            loading="lazy"
                           />
                         ) : (
                           <span className="flex items-center justify-center text-ink/30">
@@ -1336,6 +1338,8 @@ function ModalCategoria({ categoria, onClose, onGuardado }) {
 function ModalStock({ producto, onClose, onGuardado }) {
   const [subTab, setSubTab] = useState('entrada'); // 'entrada' | 'ajuste'
   const [cantidad, setCantidad] = useState('');
+  const [montoPago, setMontoPago] = useState('');
+  const [descontarCaja, setDescontarCaja] = useState(true);
   const [costoUnitario, setCostoUnitario] = useState(producto?.costo || '');
   const [stockReal, setStockReal] = useState(Number(producto?.stock_actual || 0));
   const [motivo, setMotivo] = useState('');
@@ -1351,16 +1355,37 @@ function ModalStock({ producto, onClose, onGuardado }) {
       const cant = Number(cantidad);
       if (cant <= 0) throw new Error('Indica una cantidad válida mayor a 0 para el ingreso de mercadería.');
 
+      const valorPagado = Number(montoPago || 0);
+      const costUnit = costoUnitario !== '' ? Number(costoUnitario) : (valorPagado > 0 && cant > 0 ? Number((valorPagado / cant).toFixed(4)) : undefined);
+
       await api('/inventario/entradas/', {
         method: 'POST',
         body: {
           producto: producto.id,
           cantidad: cant,
-          costo_unitario: costoUnitario !== '' ? Number(costoUnitario) : undefined,
+          costo_unitario: costUnit,
           motivo: motivo.trim() || 'Compra / reposición',
         },
       });
-      onGuardado(`Se agregaron ${formatStock(cant, producto.unidad_medida)} al stock de ${producto.nombre}.`);
+
+      let msgCaja = '';
+      if (descontarCaja && valorPagado > 0) {
+        try {
+          await api('/caja/turnos/movimientos/', {
+            method: 'POST',
+            body: {
+              tipo: 'EGRESO',
+              monto: valorPagado,
+              motivo: `Pago a distribuidor por reposición de ${producto.nombre} (${cant} ${producto.unidad_medida})`,
+            },
+          });
+          msgCaja = ` y se registró la salida de $${valorPagado.toFixed(2)} de la caja`;
+        } catch (eCaja) {
+          console.warn('No se pudo registrar egreso de caja:', eCaja);
+        }
+      }
+
+      onGuardado(`Se agregaron ${formatStock(cant, producto.unidad_medida)} al stock de ${producto.nombre}${msgCaja}.`);
     } catch (err) {
       setError(err);
     } finally {
@@ -1463,15 +1488,67 @@ function ModalStock({ producto, onClose, onGuardado }) {
               />
             </div>
 
+            {/* Dinero pagado al distribuidor y deducción opcional de caja */}
+            <div className="rounded-2xl border border-brand/20 bg-brand-soft/20 p-3 space-y-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-brand-dark">
+                <IconCash className="h-4 w-4 text-brand" />
+                <span>Pago al Distribuidor / Proveedor</span>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-ink/70">
+                  ¿Cuánto se le pagó en total al distribuidor por esta mercadería? ($)
+                </label>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-ink/40">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="inp pl-7 text-sm font-bold bg-white"
+                    placeholder="0.00 (Opcional si fue a crédito)"
+                    value={montoPago}
+                    onChange={(e) => {
+                      setMontoPago(e.target.value);
+                      const m = Number(e.target.value);
+                      const c = Number(cantidad);
+                      if (m > 0 && c > 0) {
+                        setCostoUnitario((m / c).toFixed(2));
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {Number(montoPago) > 0 && (
+                <label className="flex items-start gap-2 text-xs select-none cursor-pointer p-2 rounded-xl bg-white border border-brand/20">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 rounded text-brand focus:ring-brand"
+                    checked={descontarCaja}
+                    onChange={(e) => setDescontarCaja(e.target.checked)}
+                  />
+                  <div>
+                    <span className="font-bold text-ink block">
+                      Descontar ${Number(montoPago).toFixed(2)} del efectivo de la caja
+                    </span>
+                    <span className="text-[10px] text-ink/60 block leading-tight">
+                      Registra una salida de efectivo (egreso) para que el dinero de ventas cuadre con exactitud y no cause desbalance.
+                    </span>
+                  </div>
+                </label>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                Costo Unitario de esta compra (Opcional)
+                Costo Unitario de compra (Opcional)
               </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                className="inp mt-1"
+                className="inp mt-1 text-sm bg-white"
                 placeholder="0.00"
                 value={costoUnitario}
                 onChange={(e) => setCostoUnitario(e.target.value)}
@@ -1480,11 +1557,11 @@ function ModalStock({ producto, onClose, onGuardado }) {
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                Motivo / Proveedor
+                Motivo / Proveedor / Factura
               </label>
               <input
-                className="inp mt-1"
-                placeholder="Ej: Factura #1234 / Compra distribuidora"
+                className="inp mt-1 text-sm bg-white"
+                placeholder="Ej: Factura #1234 / Distribuidora San Juan"
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
               />

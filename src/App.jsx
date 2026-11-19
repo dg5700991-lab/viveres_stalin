@@ -101,14 +101,14 @@ function Shell() {
   return (
     <div className="h-screen bg-paper flex flex-col overflow-hidden">
       {/* Header limpio y moderno (fondo blanco, sutil y descansado) */}
-      <header className="flex-shrink-0 z-30 bg-white border-b border-ink/10 shadow-xs relative">
+      <header className="flex-shrink-0 z-30 bg-white border-b border-ink/10 shadow-sm relative">
         <div className="mx-auto flex max-w-full items-center justify-between px-3 sm:px-5 py-2.5">
           {/* Logo y Marca */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
             <img
               src="/viveres-stalin.png"
               alt="Víveres Stalin"
-              className="h-9 w-9 object-contain rounded-xl p-0.5 border border-ink/10 shadow-xs"
+              className="h-9 w-9 object-contain rounded-xl p-0.5 border border-ink/10 shadow-sm"
             />
             <div>
               <span className="font-black text-ink tracking-tight text-base leading-none block">
@@ -130,7 +130,7 @@ function Shell() {
                 className={({ isActive }) =>
                   `relative whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-bold transition flex items-center gap-1.5 ${
                     isActive
-                      ? 'bg-brand text-white shadow-xs'
+                      ? 'bg-brand text-white shadow-sm'
                       : 'text-ink/70 hover:bg-brand-soft hover:text-brand-dark'
                   }`
                 }

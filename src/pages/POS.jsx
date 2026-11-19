@@ -368,7 +368,7 @@ export default function POS() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 w-full h-[calc(100dvh-75px)] overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-2.5 sm:gap-3 lg:gap-4 w-full h-full min-h-0 overflow-hidden">
 
       {/* ── SELECTOR EN PANTALLAS MÓVILES / TABLETS (< lg) ── */}
       <div className="lg:hidden flex items-center gap-2 p-1 bg-white rounded-2xl border border-ink/10 shadow-sm flex-shrink-0">
@@ -501,13 +501,14 @@ export default function POS() {
                       }`}
                   >
                     <div>
-                      {/* Imagen o Ícono del producto */}
-                      <div className="relative mb-2 h-24 sm:h-28 w-full overflow-hidden rounded-xl bg-brand-soft/20 flex items-center justify-center border border-ink/5">
+                      {/* Imagen o Ícono del producto con proporción responsiva completa */}
+                      <div className="relative mb-2 h-28 sm:h-32 md:h-36 w-full overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center border border-ink/5 p-2">
                         {p.imagen_url ? (
                           <img
                             src={p.imagen_url}
                             alt={p.nombre}
-                            className="h-full w-full object-cover group-hover:scale-105 transition"
+                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-200"
+                            loading="lazy"
                           />
                         ) : (
                           <span className="flex items-center justify-center text-ink/30">
@@ -525,7 +526,7 @@ export default function POS() {
                               ? 'bg-red-600 text-white'
                               : isBajo
                                 ? 'bg-amber-600 text-white'
-                                : 'bg-forest/80 text-white'
+                                : 'bg-emerald-700 text-white'
                             }`}
                         >
                           <IconPackage className="h-3 w-3" />
@@ -536,7 +537,7 @@ export default function POS() {
                         <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                           <button
                             type="button"
-                            className="rounded-lg bg-white/95 px-1.5 py-1 text-[10px] font-black text-brand-dark hover:bg-white hover:text-brand shadow-sm flex items-center gap-0.5 transition border border-brand/20"
+                            className="rounded-lg bg-white/95 px-2 py-1 text-[10px] font-black text-brand hover:bg-white hover:text-brand-dark shadow-sm flex items-center gap-0.5 transition border border-brand/20 active:scale-95"
                             title="Aumentar o reponer existencias en tienda"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -548,7 +549,7 @@ export default function POS() {
                           {!isAgotado && (
                             <button
                               type="button"
-                              className="rounded-lg bg-white/95 p-1 text-ink/70 hover:bg-white hover:text-brand shadow-sm flex items-center justify-center transition"
+                              className="rounded-lg bg-white/95 p-1 text-ink/70 hover:bg-white hover:text-brand shadow-sm flex items-center justify-center transition border border-ink/10 active:scale-95"
                               title="Indicar cantidad personalizada o peso"
                               onClick={(e) => abrirModalCantidad(p, e)}
                             >
@@ -664,11 +665,11 @@ export default function POS() {
           Visible siempre en desktop (lg:), en móvil solo si vistaMovil === 'ticket'
          ══════════════════════════════════════════════════════════════════════ */}
       <aside
-        className={`w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col overflow-hidden bg-white border border-brand/20 rounded-2xl sm:rounded-3xl shadow-xl h-full ${vistaMovil === 'ticket' ? 'flex' : 'hidden lg:flex'
+        className={`w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col overflow-hidden bg-white border border-brand/20 rounded-2xl sm:rounded-3xl shadow-xl flex-1 min-h-0 lg:h-full ${vistaMovil === 'ticket' ? 'flex' : 'hidden lg:flex'
           }`}
       >
         {/* Encabezado del ticket */}
-        <div className="p-3.5 sm:p-4 border-b border-ink/10 flex items-center justify-between flex-shrink-0 bg-white">
+        <div className="p-3 sm:p-4 border-b border-ink/10 flex items-center justify-between flex-shrink-0 bg-white">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-soft text-brand">
               <IconCart className="h-4 w-4" />
@@ -699,7 +700,7 @@ export default function POS() {
             {/* Botón para volver al catálogo en móvil */}
             <button
               type="button"
-              className="lg:hidden text-xs bg-brand-soft text-brand font-bold px-2.5 py-1 rounded-xl"
+              className="lg:hidden text-xs bg-brand-soft text-brand font-bold px-2.5 py-1.5 rounded-xl hover:bg-brand-soft/80"
               onClick={() => setVistaMovil('catalogo')}
             >
               + Agregar más
@@ -708,7 +709,7 @@ export default function POS() {
         </div>
 
         {/* Scroll interno con los items y formularios de cobro */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3">
 
           {/* Listado de items del ticket */}
           {cart.length === 0 ? (
@@ -1155,10 +1156,10 @@ export default function POS() {
         </div>
 
         {/* Botón de Acción Principal de Cobro (fijo al pie del panel) */}
-        <div className="p-3 sm:p-4 border-t border-ink/10 bg-white flex-shrink-0">
+        <div className="p-3 sm:p-4 border-t border-ink/10 bg-white flex-shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
           <button
             type="button"
-            className="btn-p w-full py-4 text-sm sm:text-base font-black shadow-lg flex items-center justify-center gap-2 rounded-2xl active:scale-[0.99] transition"
+            className="btn-p w-full py-3.5 sm:py-4 text-sm sm:text-base font-black shadow-lg flex items-center justify-center gap-2 rounded-2xl active:scale-[0.99] transition"
             disabled={
               cart.length === 0 ||
               busy ||
